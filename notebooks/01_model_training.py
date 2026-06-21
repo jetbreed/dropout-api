@@ -1,11 +1,9 @@
-# notebooks/01_model_training.ipynb
-
-# Cell 1: Import libraries
+# notebooks/01_model_training.py
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, classification_report
 import xgboost as xgb
@@ -14,80 +12,142 @@ import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
-# Cell 2: Load dataset
-# If using Kaggle xAPI dataset
-df = pd.read_csv('../data/xAPI-Edu-Data.csv')
+print("=" * 60)
+print("STUDENT DROPOUT PREDICTION - MODEL TRAINING")
+print("=" * 60)
 
-# If using synthetic data (run the synthetic data generator in Step 2.5 first)
-# df = pd.read_csv('../data/synthetic_student_data.csv')
+# ========================================
+# STEP 1: LOAD DATASET
+# ========================================
+print("\n[1] Loading dataset...")
 
-print(f"Dataset shape: {df.shape}")
-print(f"Columns: {df.columns.tolist()}")
+# If you have the Kaggle xAPI dataset
+try:
+    df = pd.read_csv('../data/xAPI-Edu-Data.csv')
+    print("✅ Loaded xAPI dataset")
+except FileNotFoundError:
+    # If not, use synthetic dataset
+    try:
+        df = pd.read_csv('../data/synthetic_student_data.csv')
+        print("✅ Loaded synthetic dataset")
+    except FileNotFoundError:
+        # Generate synthetic data on the fly
+        print("⚠️  No dataset found. Generating synthetic data...")
+        np.random.seed(42)
+        n_students = 5000
+        data = {
+            'student_id': range(1, n_students + 1),
+            'age': np.random.randint(10, 20, n_students),
+            'gender': np.random.choice([0, 1], n_students),
+            'NationalITy': np.random.choice(['KW', 'Lagos', 'Abuja', 'Rivers', 'Kano'], n_students),
+            'PlaceofBirth': np.random.choice(['Nigeria', 'Other'], n_students),
+            'StageID': np.random.choice(['Lowerlevel', 'MiddleSchool', 'HighSchool'], n_students),
+            'GradeID': np.random.choice(['G-01', 'G-02', 'G-03', 'G-04'], n_students),
+            'SectionID': np.random.choice(['A', 'B', 'C'], n_students),
+            'Topic': np.random.choice(['Biology', 'Chemistry', 'Physics', 'Math'], n_students),
+            'Semester': np.random.choice(['F', 'S'], n_students),
+            'Relation': np.random.choice(['Father', 'Mother', 'Guardian'], n_students),
+            'raisedhands': np.random.poisson(20, n_students),
+            'VisITedResources': np.random.poisson(15, n_students),
+            'AnnouncementsView': np.random.poisson(10, n_students),
+            'Discussion': np.random.poisson(8, n_students),
+            'ParentAnsweringSurvey': np.random.choice(['Yes', 'No'], n_students),
+            'ParentschoolSatisfaction': np.random.choice(['Good', 'Bad'], n_students),
+            'StudentAbsenceDays': np.random.choice(['Under-7', 'Above-7'], n_students, p=[0.7, 0.3]),
+            'Class': np.random.choice(['Dropout', 'Enrolled', 'Graduate'], n_students, p=[0.3, 0.3, 0.4])
+        }
+        df = pd.DataFrame(data)
+        print(f"✅ Generated {n_students} synthetic records")
 
-# Cell 3: Explore data
-df.head()
-df.info()
-df.describe()
+print(f"   Dataset shape: {df.shape}")
+print(f"   Columns: {df.columns.tolist()}")
 
-# Cell 4: Check target distribution
+# ========================================
+# STEP 2: EXPLORE DATA
+# ========================================
+print("\n[2] Exploring data...")
+print(f"\nFirst 5 rows:")
+print(df.head())
+
+print(f"\nData types:")
+print(df.dtypes)
+
+print(f"\nTarget distribution:")
 print(df['Class'].value_counts())
-print(df['Class'].value_counts(normalize=True) * 100)
 
-# Visualize target distribution
-plt.figure(figsize=(6,4))
-df['Class'].value_counts().plot(kind='bar')
-plt.title('Distribution of Student Outcomes')
-plt.xlabel('Class')
-plt.ylabel('Count')
-plt.savefig('../models/target_distribution.png')
-plt.show()
+# ========================================
+# STEP 3: ENCODE CATEGORICAL VARIABLES
+# ========================================
+print("\n[3] Encoding categorical variables...")
 
-# Cell 5: Handle categorical variables
 # Identify categorical columns
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-print(f"Categorical columns: {categorical_cols}")
+print(f"   Categorical columns: {categorical_cols}")
 
-# Encode categorical variables
 label_encoders = {}
 for col in categorical_cols:
     le = LabelEncoder()
     df[col] = le.fit_transform(df[col])
     label_encoders[col] = le
-    print(f"{col}: {dict(zip(le.classes_, le.transform(le.classes_)))}")
 
-# Cell 6: Define features and target
-# Target is 'Class' (encoded: 0=Dropout, 1=Enrolled, 2=Graduate)
-# For binary classification, we focus on Dropout vs Non-Dropout
+print("✅ Encoding complete")
+
+# ========================================
+# STEP 4: CREATE BINARY TARGET
+# ========================================
+print("\n[4] Creating binary target (Dropout vs Non-Dropout)...")
+
+# Check Class mapping
+print(f"   Class values: {sorted(df['Class'].unique())}")
 
 # Create binary target: 1 = Dropout, 0 = Non-Dropout
-df['is_dropout'] = (df['Class'] == 0).astype(int)  # Assuming 0 is Dropout
-print(f"Dropout rate: {df['is_dropout'].mean() * 100:.1f}%")
+# If Class 0 = Dropout, 1 = Enrolled, 2 = Graduate
+df['is_dropout'] = (df['Class'] == 0).astype(int)
+dropout_rate = df['is_dropout'].mean() * 100
+print(f"   Dropout rate: {dropout_rate:.1f}%")
 
-# Define features (exclude Class and is_dropout)
+# ========================================
+# STEP 5: DEFINE FEATURES AND TARGET
+# ========================================
+print("\n[5] Defining features and target...")
+
+# Features: all columns except Class and is_dropout
 X = df.drop(['Class', 'is_dropout'], axis=1)
 y = df['is_dropout']
 
-print(f"Features shape: {X.shape}")
-print(f"Target shape: {y.shape}")
+print(f"   Features shape: {X.shape}")
+print(f"   Target shape: {y.shape}")
 
-# Cell 7: Split data
+# ========================================
+# STEP 6: SPLIT DATA
+# ========================================
+print("\n[6] Splitting data into train and test sets...")
+
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-print(f"Training set: {X_train.shape}")
-print(f"Test set: {X_test.shape}")
+print(f"   Training set: {X_train.shape[0]} samples")
+print(f"   Test set: {X_test.shape[0]} samples")
 
-# Cell 8: Scale features (optional for tree-based models, but good practice)
+# ========================================
+# STEP 7: SCALE FEATURES
+# ========================================
+print("\n[7] Scaling features...")
+
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
 # Save scaler
 joblib.dump(scaler, '../models/scaler.pkl')
-print("Scaler saved to ../models/scaler.pkl")
+print("   Scaler saved to ../models/scaler.pkl")
 
-# Cell 9: Train XGBoost Classifier
+# ========================================
+# STEP 8: TRAIN XGBOOST MODEL
+# ========================================
+print("\n[8] Training XGBoost model...")
+
 xgb_model = xgb.XGBClassifier(
     n_estimators=100,
     max_depth=6,
@@ -99,115 +159,99 @@ xgb_model = xgb.XGBClassifier(
     eval_metric='logloss'
 )
 
-# Train with early stopping
-eval_set = [(X_test_scaled, y_test)]
-xgb_model.fit(
-    X_train_scaled, y_train,
-    eval_set=eval_set,
-    verbose=False
-)
+xgb_model.fit(X_train_scaled, y_train)
+print("✅ Model training complete")
 
-print("Model training complete!")
+# ========================================
+# STEP 9: EVALUATE MODEL
+# ========================================
+print("\n[9] Evaluating model...")
 
-# Cell 10: Make predictions
 y_pred = xgb_model.predict(X_test_scaled)
 y_pred_proba = xgb_model.predict_proba(X_test_scaled)[:, 1]
 
-# Cell 11: Evaluate model
 accuracy = accuracy_score(y_test, y_pred)
 precision = precision_score(y_test, y_pred)
 recall = recall_score(y_test, y_pred)
 f1 = f1_score(y_test, y_pred)
 auc_roc = roc_auc_score(y_test, y_pred_proba)
 
-print("=" * 50)
+print("\n" + "=" * 50)
 print("MODEL PERFORMANCE METRICS")
 print("=" * 50)
-print(f"Accuracy:  {accuracy:.4f}")
-print(f"Precision: {precision:.4f}")
-print(f"Recall:    {recall:.4f}")
-print(f"F1-Score:  {f1:.4f}")
-print(f"AUC-ROC:  {auc_roc:.4f}")
+print(f" Accuracy:  {accuracy:.4f}")
+print(f" Precision: {precision:.4f}")
+print(f" Recall:    {recall:.4f}")
+print(f" F1-Score:  {f1:.4f}")
+print(f" AUC-ROC:   {auc_roc:.4f}")
 print("=" * 50)
 
-# Cell 12: Confusion Matrix
-cm = confusion_matrix(y_test, y_pred)
-plt.figure(figsize=(5,4))
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-plt.title('Confusion Matrix')
-plt.xlabel('Predicted')
-plt.ylabel('Actual')
-plt.savefig('../models/confusion_matrix.png')
-plt.show()
+# ========================================
+# STEP 10: CONFUSION MATRIX
+# ========================================
+print("\n[10] Generating confusion matrix...")
 
-# Cell 13: Classification Report
-print("\nClassification Report:")
+cm = confusion_matrix(y_test, y_pred)
+print("   Confusion Matrix:")
+print(f"   [[{cm[0][0]}, {cm[0][1]}]")
+print(f"    [{cm[1][0]}, {cm[1][1]}]")
+
+# ========================================
+# STEP 11: CLASSIFICATION REPORT
+# ========================================
+print("\n[11] Classification Report:")
 print(classification_report(y_test, y_pred, target_names=['Non-Dropout', 'Dropout']))
 
-# Cell 14: Feature importance
+# ========================================
+# STEP 12: FEATURE IMPORTANCE
+# ========================================
+print("\n[12] Feature importance...")
+
 feature_importance = pd.DataFrame({
     'feature': X.columns,
     'importance': xgb_model.feature_importances_
 }).sort_values('importance', ascending=False)
 
-print("\nTop 10 Most Important Features:")
-print(feature_importance.head(10))
+print("\n   Top 10 Most Important Features:")
+for i, row in feature_importance.head(10).iterrows():
+    print(f"   {row['feature']}: {row['importance']:.4f}")
 
-# Visualize feature importance
-plt.figure(figsize=(10,6))
-sns.barplot(data=feature_importance.head(10), x='importance', y='feature')
-plt.title('Top 10 Feature Importances (XGBoost)')
-plt.tight_layout()
-plt.savefig('../models/feature_importance.png')
-plt.show()
+# ========================================
+# STEP 13: SHAP EXPLANATIONS
+# ========================================
+print("\n[13] Generating SHAP explanations...")
 
-# Cell 15: SHAP Explanations
-# Use a smaller subset for SHAP (faster computation)
+# Use sample for SHAP (faster)
 X_test_sample = X_test_scaled[:100]
-
-# Create SHAP explainer
 explainer = shap.TreeExplainer(xgb_model)
 shap_values = explainer.shap_values(X_test_sample)
 
-# Summary plot
-plt.figure(figsize=(10,6))
-shap.summary_plot(shap_values, X_test_sample, feature_names=X.columns.tolist(), show=False)
-plt.tight_layout()
-plt.savefig('../models/shap_summary.png')
-plt.show()
+print("✅ SHAP explanations generated")
 
-# Cell 16: Save model and related files
+# ========================================
+# STEP 14: SAVE MODEL
+# ========================================
+print("\n[14] Saving model and related files...")
+
 joblib.dump(xgb_model, '../models/xgb_model.pkl')
 joblib.dump(label_encoders, '../models/label_encoders.pkl')
 
-print("Model saved to ../models/xgb_model.pkl")
-print("Label encoders saved to ../models/label_encoders.pkl")
-print("Scaler saved to ../models/scaler.pkl")
+print("   Model saved to ../models/xgb_model.pkl")
+print("   Label encoders saved to ../models/label_encoders.pkl")
 
-# Cell 17: Create a sample prediction function
-def predict_dropout(student_features):
-    """
-    Predict dropout risk for a single student.
-    
-    Args:
-        student_features: numpy array of feature values
-    
-    Returns:
-        risk_score (0-100), prediction (0/1), shap_values
-    """
-    # Scale features
-    features_scaled = scaler.transform(student_features.reshape(1, -1))
-    
-    # Get prediction and probability
-    prediction = xgb_model.predict(features_scaled)[0]
-    probability = xgb_model.predict_proba(features_scaled)[0][1]
-    
-    # Convert to risk score (0-100)
-    risk_score = probability * 100
-    
-    return risk_score, prediction
+# ========================================
+# STEP 15: TEST PREDICTION
+# ========================================
+print("\n[15] Testing prediction on sample student...")
 
-# Test with a sample student
 sample = X_test_scaled[0].reshape(1, -1)
-risk, pred = predict_dropout(sample)
-print(f"Sample student - Risk Score: {risk:.1f}%, Prediction: {'Dropout' if pred == 1 else 'Non-Dropout'}")
+probability = xgb_model.predict_proba(sample)[0][1]
+risk_score = probability * 100
+prediction = xgb_model.predict(sample)[0]
+
+print(f"   Sample student - Risk Score: {risk_score:.1f}%")
+print(f"   Prediction: {'Dropout' if prediction == 1 else 'Non-Dropout'}")
+
+print("\n" + "=" * 60)
+print("✅ MODEL TRAINING COMPLETE")
+print("=" * 60)
