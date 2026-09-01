@@ -1,42 +1,75 @@
 # docker-compose.yml
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: dropout-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dropout_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   fastapi-backend:
-    build: ./fastapi-backend
+    build:
+      context: ./fastapi-backend
+      dockerfile: Dockerfile
+    container_name: dropout-fastapi
     ports:
       - "8000:8000"
     environment:
-      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/dropout_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ./fastapi-backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   express-gateway:
-    build: ./express-gateway
+    build:
+      context: ./express-gateway
+      dockerfile: Dockerfile
+    container_name: dropout-gateway
     ports:
       - "3001:3001"
     environment:
       - PORT=3001
       - FASTAPI_URL=http://fastapi-backend:8000
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/dropout_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    depends_on:
+      - fastapi-backend
+      - postgres
     volumes:
       - ./express-gateway:/app
       - /app/node_modules
-    depends_on:
-      - fastapi-backend
-    command: npm start
+    command: npm run dev
 
   nextjs-dashboard:
-    build: ./nextjs-dashboard
+    build:
+      context: ./nextjs-dashboard
+      dockerfile: Dockerfile.dev
+    container_name: dropout-nextjs
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://express-gateway:3001
+    depends_on:
+      - express-gateway
     volumes:
       - ./nextjs-dashboard:/app
       - /app/node_modules
       - /app/.next
-    depends_on:
-      - express-gateway
     command: npm run dev
+
+volumes:
+  postgres_data:

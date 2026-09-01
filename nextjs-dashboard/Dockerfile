@@ -1,4 +1,4 @@
-# express-gateway/Dockerfile
+# nextjs-dashboard/Dockerfile
 FROM node:20-alpine
 
 WORKDIR /app
@@ -7,13 +7,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install --production
+RUN npm install
 
 # Copy application
 COPY . .
 
+# Build the application
+RUN npm run build
+
 # Expose port
-EXPOSE 3001
+EXPOSE 3000
 
 # Run the application
 CMD ["npm", "start"]
