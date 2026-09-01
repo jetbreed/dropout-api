@@ -1,0 +1,42 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  fastapi-backend:
+    build: ./fastapi-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./fastapi-backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  express-gateway:
+    build: ./express-gateway
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - FASTAPI_URL=http://fastapi-backend:8000
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+    volumes:
+      - ./express-gateway:/app
+      - /app/node_modules
+    depends_on:
+      - fastapi-backend
+    command: npm start
+
+  nextjs-dashboard:
+    build: ./nextjs-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    volumes:
+      - ./nextjs-dashboard:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - express-gateway
+    command: npm run dev
