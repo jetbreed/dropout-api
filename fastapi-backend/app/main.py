@@ -1,15 +1,25 @@
-# app/main.py
+# fastapi-backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import predict
+from app.routes import auth, predict, students, analytics
+from app.database import SessionLocal, User
+from app.auth import get_password_hash
+# fastapi-backend/app/main.py - Add seed routes
+from app.routes import seed
+from app.routes import train
+
 
 app = FastAPI(
     title="Student Dropout Risk Prediction API",
-    description="AI-powered API for predicting student dropout risk with explainable factors",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    description="AI-powered API with JWT authentication, 2FA, and email verification",
+    version="3.0.0"
 )
+
+# Add this line
+app.include_router(train.router, prefix="/api/v1", tags=["training"])
+
+# Add this line after other route inclusions
+app.include_router(seed.router, prefix="/api/v1", tags=["seed"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,14 +31,41 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {
-        "message": "Student Dropout Risk Prediction API",
-        "status": "running",
-        "docs": "/docs"
-    }
+    return {"message": "Dropout Prediction API", "status": "running"}
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-app.include_router(predict.router, prefix="/api/v1", tags=["predictions"])
+# Include routes
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+app.include_router(predict.router, prefix="/api/v1/predict", tags=["predictions"])
+app.include_router(students.router, prefix="/api/v1", tags=["students"])
+app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
+
+@app.on_event("startup")
+async def create_default_admin():
+    from app.database import SessionLocal, User
+    from app.auth import get_password_hash
+    
+    db = SessionLocal()
+    try:
+        admin = db.query(User).filter(User.username == "admin").first()
+        if not admin:
+            admin_user = User(
+                username="admin",
+                email="admin@dropout-api.com",
+                hashed_password=get_password_hash("admin123"),
+                role="admin",
+                is_active=True,
+                is_verified=True
+            )
+            db.add(admin_user)
+            db.commit()
+            print("✅ Default admin user created: admin / admin123")
+        else:
+            print("✅ Admin user already exists")
+    except Exception as e:
+        print(f"⚠️ Error creating admin: {e}")
+    finally:
+        db.close()

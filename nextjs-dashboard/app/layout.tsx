@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Student Dropout Prediction',
-  description: 'AI-powered student dropout risk prediction',
+  title: 'Dropout Prediction - Student Risk Analytics',
+  description: 'AI-powered student dropout risk prediction for educational institutions',
 };
 
 export default function RootLayout({
@@ -13,8 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning className="bg-gray-50">
+        {children}
+      </body>
     </html>
   );
 }
