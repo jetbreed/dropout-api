@@ -293,6 +293,18 @@ export default function StudentDetailPage() {
             <p className="text-xs text-gray-400">Parent Education</p>
             <p className="text-lg font-bold text-gray-900">{student.parent_education_level}/5</p>
           </div>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-400">Late Arrivals</p>
+            <p className="text-lg font-bold text-gray-900">{student.late_arrivals}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-400">Disciplinary Incidents</p>
+            <p className="text-lg font-bold text-gray-900">{student.disciplinary_incidents}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-400">Parent Education</p>
+            <p className="text-lg font-bold text-gray-900">{student.parent_education_level}/5</p>
+          </div>
         </div>
       </div>
 

@@ -16,7 +16,7 @@ export default function AdminStudentsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalStudents, setTotalStudents] = useState(0);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -25,7 +25,7 @@ export default function AdminStudentsPage() {
       return;
     }
     fetchStudents(token);
-  }, [page, search]);
+  }, [page, pageSize, search]);
 
   const fetchStudents = async (token: string) => {
     setLoading(true);
@@ -73,6 +73,27 @@ export default function AdminStudentsPage() {
     return styles[category] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage + 1 < maxVisible) {
+      startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setPageSize(Number(e.target.value));
+    setPage(1);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -116,30 +137,50 @@ export default function AdminStudentsPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search students..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
-        />
+      {/* Search and Page Size */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search students..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Show</span>
+          <select
+            value={pageSize}
+            onChange={handlePageSizeChange}
+            className="border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span className="text-sm text-gray-500">per page</span>
+        </div>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">#</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Email</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendance</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Attendance</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Assignments</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Test Scores</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden xl:table-cell">Absences</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell">Late Arrivals</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell">Disciplinary</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell">Parent Ed.</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk</th>
                 <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -147,50 +188,68 @@ export default function AdminStudentsPage() {
             <tbody className="divide-y divide-gray-100">
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
                     <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                     No students found
                   </td>
                 </tr>
               ) : (
-                students.map((student: any) => (
-                  <tr key={student.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-3 py-3">
-                      <div className="font-medium text-gray-900">
-                        {student.first_name} {student.last_name}
-                      </div>
-                      <div className="text-xs text-gray-400 sm:hidden">{student.email}</div>
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-500 hidden sm:table-cell">{student.email}</td>
-                    <td className="px-3 py-3 text-sm font-medium">{student.attendance_rate}%</td>
-                    <td className="px-3 py-3 text-sm hidden md:table-cell">{student.assignments_completed}%</td>
-                    <td className="px-3 py-3 text-sm hidden lg:table-cell">{student.test_scores_avg}%</td>
-                    <td className="px-3 py-3 text-sm hidden xl:table-cell">{student.days_absent_last_term}</td>
-                    <td className="px-3 py-3">
-                      {student.risk_category ? (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getRiskBadge(student.risk_category)}`}>
-                          {student.risk_category} ({Math.round(student.risk_score || 0)}%)
+                students.map((student: any, index: number) => {
+                  const serialNumber = (page - 1) * pageSize + index + 1;
+                  return (
+                    <tr key={student.id} className="hover:bg-gray-50/50 transition">
+                      <td className="px-2 py-3 text-center text-gray-400 text-xs">{serialNumber}</td>
+                      <td className="px-3 py-3">
+                        <div className="font-medium text-gray-900 text-sm">
+                          {student.first_name} {student.last_name}
+                        </div>
+                        <div className="text-xs text-gray-400 truncate max-w-[100px]">{student.email}</div>
+                      </td>
+                      <td className="px-3 py-3 text-sm hidden sm:table-cell">
+                        <span className={student.attendance_rate < 60 ? 'text-red-600 font-medium' : ''}>
+                          {student.attendance_rate}%
                         </span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <button
-                        onClick={() => predictStudent(student.id)}
-                        className="text-primary-600 hover:text-primary-700 text-sm font-medium transition mr-3"
-                      >
-                        Predict
-                      </button>
-                      <button
-                        onClick={() => router.push(`/admin/students/${student.id}`)}
-                        className="text-gray-500 hover:text-gray-700 text-sm transition"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-3 py-3 text-sm hidden md:table-cell">{student.assignments_completed}%</td>
+                      <td className="px-3 py-3 text-sm hidden lg:table-cell">{student.test_scores_avg}%</td>
+                      <td className="px-3 py-3 text-sm hidden xl:table-cell">
+                        <span className={student.days_absent_last_term > 10 ? 'text-red-600 font-medium' : ''}>
+                          {student.days_absent_last_term}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-sm hidden 2xl:table-cell">{student.late_arrivals}</td>
+                      <td className="px-3 py-3 text-sm hidden 2xl:table-cell">
+                        <span className={student.disciplinary_incidents > 0 ? 'text-red-600 font-medium' : ''}>
+                          {student.disciplinary_incidents}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-sm hidden 2xl:table-cell">{student.parent_education_level}/5</td>
+                      <td className="px-3 py-3">
+                        {student.risk_category ? (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getRiskBadge(student.risk_category)}`}>
+                            {student.risk_category} ({Math.round(student.risk_score || 0)}%)
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => predictStudent(student.id)}
+                          className="text-primary-600 hover:text-primary-700 text-xs font-medium transition mr-2"
+                        >
+                          Predict
+                        </button>
+                        <button
+                          onClick={() => router.push(`/admin/students/${student.id}`)}
+                          className="text-gray-500 hover:text-gray-700 text-xs transition"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -199,11 +258,11 @@ export default function AdminStudentsPage() {
 
       {/* Pagination */}
       {totalStudents > 0 && (
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm">
           <span className="text-gray-500">
-            Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, totalStudents)} of {totalStudents}
+            Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, totalStudents)} of {totalStudents} students
           </span>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
@@ -211,7 +270,21 @@ export default function AdminStudentsPage() {
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-4 py-2 text-gray-600">{page} / {totalPages}</span>
+            
+            {getPageNumbers().map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setPage(pageNum)}
+                className={`min-w-[36px] h-9 px-3 rounded-xl transition ${
+                  pageNum === page
+                    ? 'bg-primary-600 text-white font-medium shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+            
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}

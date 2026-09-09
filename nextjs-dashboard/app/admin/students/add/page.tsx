@@ -328,6 +328,42 @@ export default function AddStudentPage() {
             />
           </div>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Late Arrivals</label>
+            <input
+              type="number"
+              name="late_arrivals"
+              value={formData.late_arrivals}
+              onChange={handleChange}
+              min="0"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Disciplinary Incidents</label>
+            <input
+              type="number"
+              name="disciplinary_incidents"
+              value={formData.disciplinary_incidents}
+              onChange={handleChange}
+              min="0"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parent Education Level (1-5)</label>
+            <input
+              type="number"
+              name="parent_education_level"
+              value={formData.parent_education_level}
+              onChange={handleChange}
+              min="1"
+              max="5"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+          </div>
+        </div>
 
         <div className="flex gap-4 mt-6 pt-4 border-t border-gray-100">
           <button
