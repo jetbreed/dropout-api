@@ -3,6 +3,29 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  User,
+  Mail,
+  Calendar,
+  Activity,
+  TrendingUp,
+  Clock,
+  Shield,
+  BookOpen,
+  Award,
+  ArrowRight,
+  LogOut,
+  RefreshCw,
+  ChevronRight,
+  Eye,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Info,
+  BarChart3,
+  Target,
+  Sparkles,
+} from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:3001';
 
@@ -10,13 +33,16 @@ export default function StudentDashboard() {
   const router = useRouter();
   const [student, setStudent] = useState<any>(null);
   const [predictions, setPredictions] = useState<any[]>([]);
+  const [latestPrediction, setLatestPrediction] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [predicting, setPredicting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const userStr = localStorage.getItem('user');
-    
+
     if (!token) {
       router.push('/login');
       return;
@@ -24,82 +50,144 @@ export default function StudentDashboard() {
 
     if (userStr) {
       try {
-        const user = JSON.parse(userStr);
-        setStudent(user);
-        fetchStudentData(token, user.id);
-      } catch (e) {
-        setError('Failed to load user data');
-      }
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+        if (userData.role === 'admin') {
+          router.push('/admin/dashboard');
+          return;
+        }
+      } catch (e) {}
     }
+
+    fetchStudentData(token);
   }, []);
 
-  const fetchStudentData = async (token: string, userId: number) => {
+  const fetchStudentData = async (token: string) => {
+    setLoading(true);
     try {
       // Fetch student info
-      const studentResponse = await fetch(`${API_BASE_URL}/api/students/?search=${userId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const studentData = await studentResponse.json();
-      if (studentResponse.ok && studentData.students?.length > 0) {
-        const studentInfo = studentData.students[0];
-        setStudent({ ...studentInfo, role: 'student' });
-        // Fetch predictions for this student
-        fetchPredictions(token, studentInfo.id);
-      } else {
-        // No student profile yet - show setup page
-        setStudent({ ...JSON.parse(localStorage.getItem('user') || '{}'), role: 'student' });
-      }
-    } catch (err) {
-      setError('Failed to fetch student data');
-    }
-    setLoading(false);
-  };
-
-  const fetchPredictions = async (token: string, studentId: number) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/predictions`, {
+      const response = await fetch(`${API_BASE_URL}/api/students/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      if (response.ok) {
-        setPredictions(data.predictions || []);
+      if (response.ok && data.students?.length > 0) {
+        const studentData = data.students[0];
+        setStudent(studentData);
+        
+        // Fetch predictions for this student
+        const predResponse = await fetch(`${API_BASE_URL}/api/students/${studentData.id}/predictions`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const predData = await predResponse.json();
+        if (predResponse.ok) {
+          setPredictions(predData.predictions || []);
+          // Set latest prediction
+          if (predData.predictions && predData.predictions.length > 0) {
+            setLatestPrediction(predData.predictions[0]);
+          }
+        }
+      } else {
+        setStudent(null);
       }
     } catch (err) {
-      console.error('Failed to fetch predictions', err);
+      setError('Failed to fetch your data');
     }
+    setLoading(false);
   };
 
   const runPrediction = async () => {
     const token = localStorage.getItem('access_token');
     if (!token || !student?.id) return;
-    
+
+    setPredicting(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/students/${student.id}/predict`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
-        fetchPredictions(token, student.id);
-        fetchStudentData(token, student.id);
+        await fetchStudentData(token);
       }
     } catch (err) {
       console.error('Prediction failed', err);
     }
+    setPredicting(false);
+  };
+
+  const getRiskColor = (category: string) => {
+    const colors: Record<string, string> = {
+      'High': 'text-red-600',
+      'Medium': 'text-amber-600',
+      'Low': 'text-emerald-600',
+    };
+    return colors[category] || 'text-gray-600';
+  };
+
+  const getRiskBg = (category: string) => {
+    const colors: Record<string, string> = {
+      'High': 'bg-red-50 border-red-200',
+      'Medium': 'bg-amber-50 border-amber-200',
+      'Low': 'bg-emerald-50 border-emerald-200',
+    };
+    return colors[category] || 'bg-gray-50 border-gray-200';
+  };
+
+  const getRiskIcon = (category: string) => {
+    const icons: Record<string, any> = {
+      'High': <XCircle className="w-8 h-8 text-red-500" />,
+      'Medium': <AlertTriangle className="w-8 h-8 text-amber-500" />,
+      'Low': <CheckCircle className="w-8 h-8 text-emerald-500" />,
+    };
+    return icons[category] || <Info className="w-8 h-8 text-gray-400" />;
+  };
+
+  const getRiskEmoji = (category: string) => {
+    const emojis: Record<string, string> = {
+      'High': '🔴',
+      'Medium': '🟡',
+      'Low': '🟢',
+    };
+    return emojis[category] || '⚪';
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString();
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-6 h-6 bg-primary-600 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+          <p className="mt-4 text-gray-600 font-medium">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">🎓 My Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <div className="bg-primary-600 rounded-2xl p-2.5 shadow-lg shadow-primary-200">
+              <BookOpen className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Student Dashboard</h1>
+              <p className="text-sm text-gray-500">View your academic risk profile</p>
+            </div>
+          </div>
           <button
             onClick={() => {
               localStorage.removeItem('access_token');
@@ -107,113 +195,251 @@ export default function StudentDashboard() {
               localStorage.removeItem('user');
               router.push('/login');
             }}
-            className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
           >
+            <LogOut className="w-4 h-4" />
             Logout
           </button>
         </div>
 
-        {/* Student Profile Card */}
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
-              {student?.first_name?.[0]}{student?.last_name?.[0]}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">{student?.first_name} {student?.last_name}</h2>
-              <p className="text-gray-600">{student?.email}</p>
-              <p className="text-sm text-gray-500">Role: {student?.role || 'Student'}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Risk Gauge */}
-        {student?.risk_score !== undefined && (
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Current Risk Score</h3>
-                <p className="text-3xl font-bold mt-2">
-                  {Math.round(student.risk_score || 0)}%
-                </p>
-              </div>
-              <div className={`px-4 py-2 rounded-lg text-white font-bold ${
-                student.risk_category === 'High' ? 'bg-red-500' :
-                student.risk_category === 'Medium' ? 'bg-yellow-500' :
-                'bg-green-500'
-              }`}>
-                {student.risk_category || 'Not Predicted'}
-              </div>
-            </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
+            {error}
           </div>
         )}
 
-        {/* Actions */}
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Actions</h3>
-          <div className="flex gap-4">
+        {!student ? (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
+            <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-10 h-10 text-primary-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">Welcome, {user?.username || 'Student'}! 👋</h2>
+            <p className="text-gray-500 mt-2">
+              Your student profile hasn't been set up yet. Please contact your administrator.
+            </p>
             <button
-              onClick={runPrediction}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
+              onClick={() => router.push('/')}
+              className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm"
             >
-              🎯 Predict My Risk
-            </button>
-            <button
-              onClick={() => router.push('/dashboard/features')}
-              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300 transition"
-            >
-              View My Features
+              Go Home
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Profile Card */}
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary-200">
+                    {getInitials(student.first_name, student.last_name)}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {student.first_name} {student.last_name}
+                    </h2>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5" />
+                      {student.email}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={runPrediction}
+                    disabled={predicting}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm disabled:opacity-50"
+                  >
+                    {predicting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Predicting...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Predict Risk
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
 
-        {/* Prediction History */}
-        {predictions.length > 0 && (
-          <div className="bg-white rounded-lg shadow border border-gray-200">
-            <div className="px-6 py-4 border-b">
-              <h3 className="text-lg font-semibold">📊 Prediction History</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Score</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Top Factors</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {predictions.map((pred: any) => (
-                    <tr key={pred.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm">
-                        {new Date(pred.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 font-bold">{Math.round(pred.risk_score)}%</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          pred.risk_category === 'High' ? 'bg-red-100 text-red-800' :
-                          pred.risk_category === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {pred.risk_category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {pred.top_factors?.map((f: any, i: number) => (
-                          <span key={i} className="inline-block bg-gray-100 rounded px-2 py-1 mr-1 text-xs">
-                            {f.feature.replace(/_/g, ' ')}: {f.value}
+            {/* Latest Prediction Card */}
+            {latestPrediction ? (
+              <div className={`rounded-3xl border-2 p-6 mb-6 ${getRiskBg(latestPrediction.risk_category)}`}>
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    {getRiskIcon(latestPrediction.risk_category)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Your Current Risk Status</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className={`text-2xl font-bold ${getRiskColor(latestPrediction.risk_category)}`}>
+                            {getRiskEmoji(latestPrediction.risk_category)} {latestPrediction.risk_category} Risk
                           </span>
-                        ))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <span className="text-sm text-gray-500">
+                            Score: <span className="font-bold text-gray-900">{Math.round(latestPrediction.risk_score)}%</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Clock className="w-4 h-4" />
+                        {formatDate(latestPrediction.created_at)}
+                      </div>
+                    </div>
+
+                    {/* Top Factors */}
+                    {latestPrediction.top_factors && latestPrediction.top_factors.length > 0 && (
+                      <div className="mt-4 p-4 bg-white/60 rounded-xl border border-white/80">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                          🔍 Top Contributing Factors
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {latestPrediction.top_factors.map((factor: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 shadow-sm">
+                              <span className="text-sm text-gray-600 capitalize">
+                                {factor.feature.replace(/_/g, ' ')}
+                              </span>
+                              <span className="text-sm font-medium text-gray-900">
+                                {factor.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interventions */}
+                    {latestPrediction.interventions && latestPrediction.interventions.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+                          💡 Recommended Actions
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {latestPrediction.interventions.map((inv: any, idx: number) => (
+                            <span
+                              key={idx}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+                                inv.priority === 'High'
+                                  ? 'bg-red-100 text-red-700'
+                                  : inv.priority === 'Medium'
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-emerald-100 text-emerald-700'
+                              }`}
+                            >
+                              {inv.priority === 'High' && <AlertTriangle className="w-3 h-3" />}
+                              {inv.priority === 'Medium' && <Info className="w-3 h-3" />}
+                              {inv.priority === 'Low' && <CheckCircle className="w-3 h-3" />}
+                              {inv.action}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-3xl border border-gray-200 p-8 text-center mb-6">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Eye className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700">No Prediction Yet</h3>
+                <p className="text-gray-500 text-sm mt-1">
+                  Click the <strong>"Predict Risk"</strong> button above to get your first prediction.
+                </p>
+                <button
+                  onClick={runPrediction}
+                  disabled={predicting}
+                  className="mt-4 inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm disabled:opacity-50"
+                >
+                  {predicting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Predicting...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Predict My Risk
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+                <p className="text-xs text-gray-400">Attendance</p>
+                <p className="text-lg font-bold text-gray-900">{student.attendance_rate}%</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+                <p className="text-xs text-gray-400">Assignments</p>
+                <p className="text-lg font-bold text-gray-900">{student.assignments_completed}%</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+                <p className="text-xs text-gray-400">Test Scores</p>
+                <p className="text-lg font-bold text-gray-900">{student.test_scores_avg}%</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+                <p className="text-xs text-gray-400">Absences</p>
+                <p className="text-lg font-bold text-gray-900">{student.days_absent_last_term}</p>
+              </div>
             </div>
-          </div>
+
+            {/* Prediction History */}
+            {predictions.length > 1 && (
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900">📊 Prediction History</h3>
+                  <span className="text-xs text-gray-400">{predictions.length} records</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50/50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {predictions.map((pred: any, index: number) => (
+                        <tr key={pred.id} className="hover:bg-gray-50/50 transition">
+                          <td className="px-6 py-3 text-sm text-gray-500">{formatDate(pred.created_at)}</td>
+                          <td className="px-6 py-3 font-medium text-gray-900">{Math.round(pred.risk_score)}%</td>
+                          <td className="px-6 py-3">
+                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${getRiskBg(pred.risk_category)}`}>
+                              {getRiskEmoji(pred.risk_category)} {pred.risk_category}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3">
+                            {index === 0 ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                                <CheckCircle className="w-3 h-3" />
+                                Latest
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">Previous</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
+

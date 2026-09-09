@@ -1,9 +1,10 @@
-// nextjs-dashboard/app/login/page.tsx (updated with PasswordInput)
+// nextjs-dashboard/app/login/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, GraduationCap } from 'lucide-react';
 import PasswordInput from '@/components/PasswordInput';
 
 export default function LoginPage() {
@@ -15,6 +16,23 @@ export default function LoginPage() {
   const [show2FA, setShow2FA] = useState(false);
   const [twoFAToken, setTwoFAToken] = useState('');
   const [tempUsername, setTempUsername] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.role === 'admin') {
+            router.push('/admin/dashboard');
+          } else {
+            router.push('/dashboard');
+          }
+        } catch (e) {}
+      }
+    }
+  }, []);
 
   const getErrorMessage = (data: any): string => {
     if (!data) return 'An unknown error occurred';
@@ -45,8 +63,6 @@ export default function LoginPage() {
     }
   };
 
-  // nextjs-dashboard/app/login/page.tsx - Update handleLogin function
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -56,10 +72,14 @@ export default function LoginPage() {
     const loginPassword = password || 'admin123';
 
     try {
+      const formData = new URLSearchParams();
+      formData.append('username', loginUsername);
+      formData.append('password', loginPassword);
+
       const response = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginUsername, password: loginPassword }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
       });
 
       const data = await response.json();
@@ -69,7 +89,6 @@ export default function LoginPage() {
         localStorage.setItem('refresh_token', data.refresh_token);
         if (data.user) {
           localStorage.setItem('user', JSON.stringify(data.user));
-          // Redirect based on role
           if (data.user.role === 'admin') {
             router.push('/admin/dashboard');
           } else {
@@ -78,14 +97,12 @@ export default function LoginPage() {
         } else {
           router.push('/dashboard');
         }
-        setError(null);
       } else if (data.requires_2fa) {
         setTempUsername(username);
         setShow2FA(true);
         setError(null);
       } else {
-        const errorMsg = getErrorMessage(data);
-        setError(errorMsg);
+        setError(getErrorMessage(data));
       }
     } catch (err) {
       setError('Login failed: ' + (err as Error).message);
@@ -93,91 +110,41 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  const handle2FAVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('http://localhost:3001/api/auth/verify-2fa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: tempUsername,
-          token: twoFAToken,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.access_token) {
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('refresh_token', data.refresh_token);
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-        }
-        router.push('/dashboard');
-      } else {
-        const errorMsg = getErrorMessage(data);
-        setError(errorMsg);
-      }
-    } catch (err) {
-      setError('2FA verification failed: ' + (err as Error).message);
-    }
-    setLoading(false);
-  };
-
-  // Show 2FA form if required
+  // 2FA Form
   if (show2FA) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full border border-gray-200">
-          <div className="text-center mb-6">
-            <div className="text-4xl mb-2">🔐</div>
-            <h1 className="text-2xl font-bold text-gray-900">Two-Factor Authentication</h1>
-            <p className="text-gray-600 text-sm mt-1">
-              Enter the verification code from your authenticator app
-            </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50 p-4">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full border border-white/30">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-primary-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Two-Factor Authentication</h2>
+            <p className="text-gray-500 mt-2 text-sm">Enter the code from your authenticator app</p>
           </div>
 
           <form onSubmit={handle2FAVerification} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Verification Code
-              </label>
-              <input
-                type="text"
-                value={twoFAToken}
-                onChange={(e) => setTwoFAToken(e.target.value)}
-                placeholder="Enter 6-digit code"
-                maxLength={6}
-                className="w-full border rounded-md px-3 py-2 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                autoFocus
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-                ❌ {error}
-              </div>
-            )}
-
+            <input
+              type="text"
+              value={twoFAToken}
+              onChange={(e) => setTwoFAToken(e.target.value)}
+              placeholder="Enter 6-digit code"
+              maxLength={6}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+              autoFocus
+            />
+            {error && <div className="text-red-500 text-sm text-center">{error}</div>}
             <button
               type="submit"
               disabled={loading || twoFAToken.length < 6}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 disabled:opacity-50"
+              className="w-full bg-primary-600 text-white py-3 rounded-xl hover:bg-primary-700 transition font-medium shadow-sm disabled:opacity-50"
             >
               {loading ? 'Verifying...' : 'Verify Code'}
             </button>
-
             <button
               type="button"
-              onClick={() => {
-                setShow2FA(false);
-                setTwoFAToken('');
-                setError(null);
-              }}
-              className="w-full text-sm text-gray-500 hover:text-gray-700"
+              onClick={() => { setShow2FA(false); setTwoFAToken(''); setError(null); }}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 transition"
             >
               ← Back to login
             </button>
@@ -187,67 +154,86 @@ export default function LoginPage() {
     );
   }
 
-  // Login form
+  // Login Form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full border border-gray-200">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-blue-600">🎓 Dropout Prediction</h1>
-          <p className="text-gray-600 text-sm mt-1">Sign in to access the dashboard</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50 p-4">
+      <div className="w-full max-w-md">
+        {/* Logo/Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-xl px-6 py-3 rounded-2xl shadow-sm border border-white/30">
+            <GraduationCap className="w-8 h-8 text-primary-600" />
+            <span className="text-xl font-bold text-gray-900">Dropout Predictor</span>
+          </div>
+          <p className="mt-3 text-gray-500 text-sm">Sign in to access your dashboard</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
+        {/* Login Card */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/30">
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white/50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <Link href="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 transition">
+                  Forgot?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white/50"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary-600 text-white py-3 rounded-xl hover:bg-primary-700 transition font-medium shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 group"
+            >
+              {loading ? 'Logging in...' : 'Sign in'}
+              {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              Don't have an account?{' '}
+              <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium transition">
+                Create one
+              </Link>
+            </p>
           </div>
 
-          <PasswordInput
-            id="password"
-            name="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            label="Password"
-            required
-          />
-
-          {error && (
-            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-              ❌ {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 disabled:opacity-50"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <div className="mt-4 text-center space-y-2">
-          <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline block">
-            Forgot password?
-          </Link>
-          <Link href="/register" className="text-sm text-gray-600 hover:text-gray-800 block">
-            Don't have an account? <span className="text-blue-600">Sign up</span>
-          </Link>
+          <div className="mt-6 pt-6 border-t border-gray-200/50">
+            <p className="text-xs text-gray-400 text-center">
+              Default: admin / admin123
+            </p>
+          </div>
         </div>
-
-        <p className="mt-4 text-gray-400 text-xs text-center border-t pt-4">
-          Default: admin / admin123
-        </p>
       </div>
     </div>
   );

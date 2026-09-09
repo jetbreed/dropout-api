@@ -4,11 +4,15 @@ from sqlalchemy.orm import Session
 import numpy as np
 import traceback
 from datetime import datetime
+from pydantic import BaseModel
 from app.database import get_db, Student, User, Prediction
 from app.auth import get_current_user, require_role
 from app.services.ml_model import predict_dropout_risk
 
 router = APIRouter(prefix="/seed", tags=["seed"])
+
+class SeedRequest(BaseModel):
+    count: int = 10
 
 def to_python_value(val):
     """Convert numpy types to Python native types"""
@@ -30,32 +34,40 @@ def generate_unique_email(first_name: str, last_name: str, index: int, timestamp
 
 @router.post("/students")
 async def seed_students(
-    count: int = 10,
+    request: SeedRequest,
     current_user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db)
 ):
     """Seed synthetic student data into the database."""
+    count = request.count
     try:
+        # Update the seed function to generate more diverse data
+        # At the beginning of the loop, add more variety:
+
+        # Generate unique names with more variety
         first_names = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'James', 'Jessica',
-                       'Robert', 'Ashley', 'William', 'Amanda', 'Joseph', 'Jennifer', 'Daniel',
-                       'Elizabeth', 'Thomas', 'Melissa', 'Matthew', 'Patricia']
+                    'Robert', 'Ashley', 'William', 'Amanda', 'Joseph', 'Jennifer', 'Daniel',
+                    'Elizabeth', 'Thomas', 'Melissa', 'Matthew', 'Patricia', 'Christopher',
+                    'Linda', 'Anthony', 'Barbara', 'Mark', 'Susan', 'Paul', 'Margaret',
+                    'Steven', 'Dorothy', 'Andrew', 'Betty', 'Joshua', 'Helen', 'Kenneth',
+                    'Sharon', 'Kevin', 'Deborah', 'Brian', 'Rachel', 'George', 'Carol']
+
         last_names = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
-                      'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas',
-                      'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee']
+                    'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas',
+                    'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White',
+                    'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker',
+                    'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill']
 
         students_created = []
-        np.random.seed(None)  # Use random seed for uniqueness
+        np.random.seed(None)
         
-        # Get current count to avoid duplicates
         existing_count = db.query(Student).count()
         timestamp = int(datetime.utcnow().timestamp())
 
         for i in range(count):
-            # Choose names
             first_name = to_python_value(np.random.choice(first_names))
             last_name = to_python_value(np.random.choice(last_names))
             
-            # Generate features with proper type conversion
             age = int(np.random.randint(10, 20))
             gender = int(np.random.choice([0, 1]))
             
@@ -78,7 +90,6 @@ async def seed_students(
             family_income_level = int(np.random.choice([1, 2, 3, 4, 5], p=[0.2, 0.3, 0.25, 0.15, 0.1]))
             has_internet_access = int(np.random.choice([0, 1], p=[0.4, 0.6]))
             
-            # Generate unique email
             email = generate_unique_email(first_name, last_name, existing_count + i, timestamp)
             
             student = Student(
@@ -105,11 +116,9 @@ async def seed_students(
         
         db.commit()
         
-        # Refresh students to get IDs
         for student in students_created:
             db.refresh(student)
         
-        # Predict for each student
         predictions_count = 0
         for student in students_created:
             try:
@@ -167,7 +176,6 @@ async def delete_all_students(
 ):
     """Delete all students (Admin only) - Use with caution!"""
     try:
-        # Delete predictions first (foreign key constraint)
         db.query(Prediction).delete()
         db.query(Student).delete()
         db.commit()

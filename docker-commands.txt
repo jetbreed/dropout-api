@@ -1,0 +1,48 @@
+# ============================================
+# START / STOP
+# ============================================
+docker compose up -d              # Start all services in background
+docker compose down               # Stop all services
+docker compose down -v            # Stop all services AND delete database
+
+# ============================================
+# REBUILD
+# ============================================
+docker compose up --build         # Rebuild and start all
+docker compose build fastapi-backend      # Rebuild only FastAPI
+docker compose build nextjs-dashboard     # Rebuild only Next.js
+docker compose build express-gateway      # Rebuild only Express Gateway
+
+# ============================================
+# VIEW STATUS
+# ============================================
+docker compose ps                 # Check all service status
+docker compose logs fastapi-backend --tail 30   # View FastAPI logs
+docker compose logs nextjs-dashboard --tail 30  # View Next.js logs
+docker compose logs express-gateway --tail 30   # View Gateway logs
+
+# ============================================
+# RESTART INDIVIDUAL SERVICES
+# ============================================
+docker compose restart fastapi-backend
+docker compose restart nextjs-dashboard
+docker compose restart express-gateway
+
+# ============================================
+# OPEN SHELL IN CONTAINER
+# ============================================
+docker exec -it dropout-fastapi /bin/bash
+docker exec -it dropout-nextjs /bin/sh
+docker exec -it dropout-postgres /bin/bash
+
+# ============================================
+# DATABASE (PostgreSQL)
+# ============================================
+docker exec -it dropout-postgres psql -U postgres -d dropout_db
+# Inside psql: \dt (list tables), \d students (describe table), SELECT * FROM students; (query)
+
+# ============================================
+# CLEANUP (Remove everything)
+# ============================================
+docker compose down -v            # Remove containers and volumes
+docker system prune -a            # Remove ALL unused Docker resources

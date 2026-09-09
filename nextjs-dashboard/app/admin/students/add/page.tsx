@@ -29,7 +29,7 @@ export default function AddStudentPage() {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+    const value = e.target.type === 'number' ? parseInt(e.target.value) || 0 : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
   };
 
@@ -54,11 +54,25 @@ export default function AddStudentPage() {
         body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         router.push('/admin/students');
       } else {
-        const data = await response.json();
-        setError(data.detail || 'Failed to create student');
+        // Extract error message properly
+        let errorMsg = 'Failed to create student';
+        if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMsg = data.detail;
+          } else if (Array.isArray(data.detail)) {
+            errorMsg = data.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+          } else if (typeof data.detail === 'object') {
+            errorMsg = JSON.stringify(data.detail);
+          }
+        } else if (data.error) {
+          errorMsg = data.error;
+        }
+        setError(errorMsg);
       }
     } catch (err) {
       setError('Failed to create student');
@@ -66,55 +80,94 @@ export default function AddStudentPage() {
     setLoading(false);
   };
 
+  const getErrorMessage = (field: string) => {
+    // Validate fields before submission
+    if (formData.has_internet_access < 0 || formData.has_internet_access > 1) {
+      return 'Internet access must be 0 (No) or 1 (Yes)';
+    }
+    if (formData.age < 5 || formData.age > 25) {
+      return 'Age must be between 5 and 25';
+    }
+    if (formData.gender < 0 || formData.gender > 1) {
+      return 'Gender must be 0 (Female) or 1 (Male)';
+    }
+    return null;
+  };
+
+  const validationError = getErrorMessage('');
+
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">➕ Add Student</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => router.push('/admin/students')}
+          className="text-gray-500 hover:text-gray-700 transition"
+        >
+          ← Back
+        </button>
+        <h1 className="text-2xl font-bold text-gray-900">➕ Add Student</h1>
+      </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           ❌ {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 border border-gray-200">
-        <div className="grid grid-cols-2 gap-4">
+      {validationError && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-sm">
+          ⚠️ {validationError}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              First Name <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               name="first_name"
               value={formData.first_name}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
               required
+              placeholder="John"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Last Name <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               name="last_name"
               value={formData.last_name}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
               required
+              placeholder="Doe"
             />
           </div>
         </div>
 
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email <span className="text-red-500">*</span>
+          </label>
           <input
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             required
+            placeholder="student@school.com"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
             <input
@@ -122,22 +175,40 @@ export default function AddStudentPage() {
               name="age"
               value={formData.age}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              min="5"
+              max="25"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Gender (0=F, 1=M)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
             <input
               type="number"
               name="gender"
               value={formData.gender}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              min="0"
+              max="1"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             />
+            <p className="text-xs text-gray-400 mt-1">0=Female, 1=Male</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Internet Access</label>
+            <input
+              type="number"
+              name="has_internet_access"
+              value={formData.has_internet_access}
+              onChange={handleChange}
+              min="0"
+              max="1"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">0=No, 1=Yes</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Attendance Rate (%)</label>
             <input
@@ -145,7 +216,9 @@ export default function AddStudentPage() {
               name="attendance_rate"
               value={formData.attendance_rate}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              min="0"
+              max="100"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             />
           </div>
           <div>
@@ -155,23 +228,41 @@ export default function AddStudentPage() {
               name="assignments_completed"
               value={formData.assignments_completed}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              min="0"
+              max="100"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             />
           </div>
         </div>
 
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Test Score Average (%)</label>
-          <input
-            type="number"
-            name="test_scores_avg"
-            value={formData.test_scores_avg}
-            onChange={handleChange}
-            className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Test Score Average (%)</label>
+            <input
+              type="number"
+              name="test_scores_avg"
+              value={formData.test_scores_avg}
+              onChange={handleChange}
+              min="0"
+              max="100"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Previous Grade (%)</label>
+            <input
+              type="number"
+              name="previous_grade"
+              value={formData.previous_grade}
+              onChange={handleChange}
+              min="0"
+              max="100"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Days Absent</label>
             <input
@@ -179,7 +270,8 @@ export default function AddStudentPage() {
               name="days_absent_last_term"
               value={formData.days_absent_last_term}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              min="0"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             />
           </div>
           <div>
@@ -189,12 +281,10 @@ export default function AddStudentPage() {
               name="late_arrivals"
               value={formData.late_arrivals}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              min="0"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Disciplinary Incidents</label>
             <input
@@ -202,33 +292,63 @@ export default function AddStudentPage() {
               name="disciplinary_incidents"
               value={formData.disciplinary_incidents}
               onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Internet Access (0=No, 1=Yes)</label>
-            <input
-              type="number"
-              name="has_internet_access"
-              value={formData.has_internet_access}
-              onChange={handleChange}
-              className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              min="0"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
             />
           </div>
         </div>
 
-        <div className="flex gap-4 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Parent Education Level <span className="text-gray-400 text-xs">(1-5)</span>
+            </label>
+            <input
+              type="number"
+              name="parent_education_level"
+              value={formData.parent_education_level}
+              onChange={handleChange}
+              min="1"
+              max="5"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Family Income Level <span className="text-gray-400 text-xs">(1-5)</span>
+            </label>
+            <input
+              type="number"
+              name="family_income_level"
+              value={formData.family_income_level}
+              onChange={handleChange}
+              min="1"
+              max="5"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-4 mt-6 pt-4 border-t border-gray-100">
           <button
             type="submit"
-            disabled={loading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+            disabled={loading || !!validationError}
+            className="flex-1 bg-primary-600 text-white px-6 py-2.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-50 font-medium shadow-sm"
           >
-            {loading ? 'Creating...' : 'Create Student'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating...
+              </span>
+            ) : 'Create Student'}
           </button>
           <button
             type="button"
             onClick={() => router.push('/admin/students')}
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition"
+            className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition font-medium"
           >
             Cancel
           </button>

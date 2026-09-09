@@ -15,7 +15,6 @@ interface PasswordInputProps {
   minLength?: number;
   autoComplete?: string;
   className?: string;
-  disabled?: boolean;
 }
 
 export default function PasswordInput({
@@ -29,21 +28,14 @@ export default function PasswordInput({
   minLength = 8,
   autoComplete = 'current-password',
   className = '',
-  disabled = false,
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
 
-  const toggleVisibility = () => setShowPassword(!showPassword);
-
   return (
-    <div className="w-full">
+    <div className={`w-full ${className}`}>
       {label && (
-        <label
-          htmlFor={id || name}
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+        <label htmlFor={id || name} className="block text-sm font-medium text-gray-700 mb-1.5">
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <div className="relative">
@@ -57,26 +49,14 @@ export default function PasswordInput({
           required={required}
           minLength={minLength}
           autoComplete={autoComplete}
-          disabled={disabled}
-          className={`
-            w-full border rounded-md px-3 py-2 pr-10
-            focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            disabled:opacity-50 disabled:cursor-not-allowed
-            ${className}
-          `}
+          className="w-full border border-gray-200 rounded-xl pl-4 pr-12 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
         />
         <button
           type="button"
-          onClick={toggleVisibility}
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label={showPassword ? 'Hide password' : 'Show password'}
-          tabIndex={-1}
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
         >
-          {showPassword ? (
-            <EyeOff className="h-5 w-5" />
-          ) : (
-            <Eye className="h-5 w-5" />
-          )}
+          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
         </button>
       </div>
     </div>
