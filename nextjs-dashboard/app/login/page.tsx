@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, GraduationCap } from 'lucide-react';
 import PasswordInput from '@/components/PasswordInput';
 
+
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -200,6 +201,18 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white/50"
                 />
+
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  label="Password"
+                  required
+                  autoComplete="current-password"
+                />
+                
               </div>
             </div>
 

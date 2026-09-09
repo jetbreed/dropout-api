@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, User, Lock, Shield, ArrowRight, GraduationCap, CheckCircle } from 'lucide-react';
 import PasswordInput from '@/components/PasswordInput';
 
+
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -129,16 +130,16 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  value={formData.password}
                   onChange={handleChange}
-                  placeholder="Choose a username"
-                  className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white/50"
+                  placeholder="Min 8 characters"
+                  label="Password"
                   required
-                  minLength={3}
-                  maxLength={50}
+                  minLength={8}
+                  autoComplete="new-password"
                 />
               </div>
             </div>
@@ -147,14 +148,16 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                <PasswordInput
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
                   onChange={handleChange}
-                  placeholder="Enter your email"
-                  className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white/50"
+                  placeholder="Re-enter password"
+                  label="Confirm Password"
                   required
+                  minLength={8}
+                  autoComplete="new-password"
                 />
               </div>
             </div>
@@ -163,15 +166,16 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
+                <PasswordInput
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
                   onChange={handleChange}
-                  placeholder="Min 8 characters"
-                  className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white/50"
+                  placeholder="Re-enter password"
+                  label="Confirm Password"
                   required
                   minLength={8}
+                  autoComplete="new-password"
                 />
               </div>
             </div>

@@ -163,7 +163,6 @@ export default function ResetPasswordPage() {
             minLength={8}
             autoComplete="new-password"
           />
-
           {error && (
             <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
               ❌ {error}

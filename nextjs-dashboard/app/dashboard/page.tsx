@@ -1,445 +1,284 @@
-// nextjs-dashboard/app/dashboard/page.tsx
+// nextjs-dashboard/app/admin/students/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  User,
-  Mail,
-  Calendar,
-  Activity,
-  TrendingUp,
-  Clock,
-  Shield,
-  BookOpen,
-  Award,
-  ArrowRight,
-  LogOut,
-  RefreshCw,
-  ChevronRight,
-  Eye,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  Info,
-  BarChart3,
-  Target,
-  Sparkles,
-} from 'lucide-react';
+import { Search, Plus, RefreshCw, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:3001';
 
-export default function StudentDashboard() {
+export default function AdminStudentsPage() {
   const router = useRouter();
-  const [student, setStudent] = useState<any>(null);
-  const [predictions, setPredictions] = useState<any[]>([]);
-  const [latestPrediction, setLatestPrediction] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [predicting, setPredicting] = useState(false);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    const userStr = localStorage.getItem('user');
-
     if (!token) {
       router.push('/login');
       return;
     }
+    fetchStudents(token);
+  }, [page, pageSize, search]);
 
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUser(userData);
-        if (userData.role === 'admin') {
-          router.push('/admin/dashboard');
-          return;
-        }
-      } catch (e) {}
-    }
-
-    fetchStudentData(token);
-  }, []);
-
-  const fetchStudentData = async (token: string) => {
+  const fetchStudents = async (token: string) => {
     setLoading(true);
     try {
-      // Fetch student info
-      const response = await fetch(`${API_BASE_URL}/api/students/`, {
+      const url = `${API_BASE_URL}/api/students/?page=${page}&page_size=${pageSize}${search ? `&search=${search}` : ''}`;
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      if (response.ok && data.students?.length > 0) {
-        const studentData = data.students[0];
-        setStudent(studentData);
-        
-        // Fetch predictions for this student
-        const predResponse = await fetch(`${API_BASE_URL}/api/students/${studentData.id}/predictions`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const predData = await predResponse.json();
-        if (predResponse.ok) {
-          setPredictions(predData.predictions || []);
-          // Set latest prediction
-          if (predData.predictions && predData.predictions.length > 0) {
-            setLatestPrediction(predData.predictions[0]);
-          }
-        }
+      if (response.ok) {
+        setStudents(data.students || []);
+        setTotalPages(data.total_pages || 1);
+        setTotalStudents(data.total || 0);
       } else {
-        setStudent(null);
+        setError(data.detail || 'Failed to fetch students');
       }
     } catch (err) {
-      setError('Failed to fetch your data');
+      setError('Failed to fetch students');
     }
     setLoading(false);
   };
 
-  const runPrediction = async () => {
+  const predictStudent = async (studentId: number) => {
     const token = localStorage.getItem('access_token');
-    if (!token || !student?.id) return;
-
-    setPredicting(true);
+    if (!token) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${student.id}/predict`, {
+      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/predict`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
-        await fetchStudentData(token);
+        fetchStudents(token);
       }
     } catch (err) {
       console.error('Prediction failed', err);
     }
-    setPredicting(false);
   };
 
-  const getRiskColor = (category: string) => {
-    const colors: Record<string, string> = {
-      'High': 'text-red-600',
-      'Medium': 'text-amber-600',
-      'Low': 'text-emerald-600',
+  const getRiskBadge = (category: string) => {
+    const styles: Record<string, string> = {
+      'High': 'bg-red-100 text-red-700 border-red-200',
+      'Medium': 'bg-amber-100 text-amber-700 border-amber-200',
+      'Low': 'bg-emerald-100 text-emerald-700 border-emerald-200',
     };
-    return colors[category] || 'text-gray-600';
+    return styles[category] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
-  const getRiskBg = (category: string) => {
-    const colors: Record<string, string> = {
-      'High': 'bg-red-50 border-red-200',
-      'Medium': 'bg-amber-50 border-amber-200',
-      'Low': 'bg-emerald-50 border-emerald-200',
-    };
-    return colors[category] || 'bg-gray-50 border-gray-200';
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage + 1 < maxVisible) {
+      startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
   };
 
-  const getRiskIcon = (category: string) => {
-    const icons: Record<string, any> = {
-      'High': <XCircle className="w-8 h-8 text-red-500" />,
-      'Medium': <AlertTriangle className="w-8 h-8 text-amber-500" />,
-      'Low': <CheckCircle className="w-8 h-8 text-emerald-500" />,
-    };
-    return icons[category] || <Info className="w-8 h-8 text-gray-400" />;
-  };
-
-  const getRiskEmoji = (category: string) => {
-    const emojis: Record<string, string> = {
-      'High': '🔴',
-      'Medium': '🟡',
-      'Low': '🟢',
-    };
-    return emojis[category] || '⚪';
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString();
-  };
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setPageSize(Number(e.target.value));
+    setPage(1); // Reset to first page when changing page size
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 bg-primary-600 rounded-full animate-pulse"></div>
-            </div>
-          </div>
-          <p className="mt-4 text-gray-600 font-medium">Loading your dashboard...</p>
+      <div className="flex items-center justify-center h-64">
+        <div className="relative">
+          <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 p-4 md:p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary-600 rounded-2xl p-2.5 shadow-lg shadow-primary-200">
-              <BookOpen className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Student Dashboard</h1>
-              <p className="text-sm text-gray-500">View your academic risk profile</p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">👨‍🎓 Students</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{totalStudents} students in the system</p>
+        </div>
+        <div className="flex gap-3">
           <button
             onClick={() => {
-              localStorage.removeItem('access_token');
-              localStorage.removeItem('refresh_token');
-              localStorage.removeItem('user');
-              router.push('/login');
+              const token = localStorage.getItem('access_token');
+              if (token) {
+                fetch('/api/seed/students?count=10', {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                }).then(() => fetchStudents(token));
+              }
             }}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition"
           >
-            <LogOut className="w-4 h-4" />
-            Logout
+            <RefreshCw className="w-4 h-4" />
+            Seed
+          </button>
+          <button
+            onClick={() => router.push('/admin/students/add')}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Add Student
           </button>
         </div>
+      </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
-            {error}
-          </div>
-        )}
+      {/* Search and Page Size */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search students..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Show</span>
+          <select
+            value={pageSize}
+            onChange={handlePageSizeChange}
+            className="border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span className="text-sm text-gray-500">per page</span>
+        </div>
+      </div>
 
-        {!student ? (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
-            <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-10 h-10 text-primary-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900">Welcome, {user?.username || 'Student'}! 👋</h2>
-            <p className="text-gray-500 mt-2">
-              Your student profile hasn't been set up yet. Please contact your administrator.
-            </p>
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50/50 border-b border-gray-100">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">#</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Email</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendance</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Assignments</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Test Scores</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden xl:table-cell">Absences</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk</th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {students.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                    <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    No students found
+                  </td>
+                </tr>
+              ) : (
+                students.map((student: any, index: number) => {
+                  const serialNumber = (page - 1) * pageSize + index + 1;
+                  return (
+                    <tr key={student.id} className="hover:bg-gray-50/50 transition">
+                      <td className="px-3 py-3 text-sm text-gray-400 text-center">{serialNumber}</td>
+                      <td className="px-3 py-3">
+                        <div className="font-medium text-gray-900">
+                          {student.first_name} {student.last_name}
+                        </div>
+                        <div className="text-xs text-gray-400 sm:hidden">{student.email}</div>
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-500 hidden sm:table-cell">{student.email}</td>
+                      <td className="px-3 py-3 text-sm font-medium">{student.attendance_rate}%</td>
+                      <td className="px-3 py-3 text-sm hidden md:table-cell">{student.assignments_completed}%</td>
+                      <td className="px-3 py-3 text-sm hidden lg:table-cell">{student.test_scores_avg}%</td>
+                      <td className="px-3 py-3 text-sm hidden xl:table-cell">{student.days_absent_last_term}</td>
+                      <td className="px-3 py-3">
+                        {student.risk_category ? (
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getRiskBadge(student.risk_category)}`}>
+                            {student.risk_category} ({Math.round(student.risk_score || 0)}%)
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-sm">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <button
+                          onClick={() => predictStudent(student.id)}
+                          className="text-primary-600 hover:text-primary-700 text-sm font-medium transition mr-3"
+                        >
+                          Predict
+                        </button>
+                        <button
+                          onClick={() => router.push(`/admin/students/${student.id}`)}
+                          className="text-gray-500 hover:text-gray-700 text-sm transition"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      {totalStudents > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm">
+          <span className="text-gray-500">
+            Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, totalStudents)} of {totalStudents} students
+          </span>
+          <div className="flex items-center gap-1">
             <button
-              onClick={() => router.push('/')}
-              className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Go Home
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            
+            {getPageNumbers().map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setPage(pageNum)}
+                className={`min-w-[36px] h-9 px-3 rounded-xl transition ${
+                  pageNum === page
+                    ? 'bg-primary-600 text-white font-medium shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+            
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        ) : (
-          <>
-            {/* Profile Card */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary-200">
-                    {getInitials(student.first_name, student.last_name)}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      {student.first_name} {student.last_name}
-                    </h2>
-                    <p className="text-sm text-gray-500 flex items-center gap-1">
-                      <Mail className="w-3.5 h-3.5" />
-                      {student.email}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={runPrediction}
-                    disabled={predicting}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm disabled:opacity-50"
-                  >
-                    {predicting ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        Predicting...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        Predict Risk
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Latest Prediction Card */}
-            {latestPrediction ? (
-              <div className={`rounded-3xl border-2 p-6 mb-6 ${getRiskBg(latestPrediction.risk_category)}`}>
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    {getRiskIcon(latestPrediction.risk_category)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Your Current Risk Status</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className={`text-2xl font-bold ${getRiskColor(latestPrediction.risk_category)}`}>
-                            {getRiskEmoji(latestPrediction.risk_category)} {latestPrediction.risk_category} Risk
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            Score: <span className="font-bold text-gray-900">{Math.round(latestPrediction.risk_score)}%</span>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="w-4 h-4" />
-                        {formatDate(latestPrediction.created_at)}
-                      </div>
-                    </div>
-
-                    {/* Top Factors */}
-                    {latestPrediction.top_factors && latestPrediction.top_factors.length > 0 && (
-                      <div className="mt-4 p-4 bg-white/60 rounded-xl border border-white/80">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-                          🔍 Top Contributing Factors
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          {latestPrediction.top_factors.map((factor: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 shadow-sm">
-                              <span className="text-sm text-gray-600 capitalize">
-                                {factor.feature.replace(/_/g, ' ')}
-                              </span>
-                              <span className="text-sm font-medium text-gray-900">
-                                {factor.value}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Interventions */}
-                    {latestPrediction.interventions && latestPrediction.interventions.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-                          💡 Recommended Actions
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {latestPrediction.interventions.map((inv: any, idx: number) => (
-                            <span
-                              key={idx}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                                inv.priority === 'High'
-                                  ? 'bg-red-100 text-red-700'
-                                  : inv.priority === 'Medium'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-emerald-100 text-emerald-700'
-                              }`}
-                            >
-                              {inv.priority === 'High' && <AlertTriangle className="w-3 h-3" />}
-                              {inv.priority === 'Medium' && <Info className="w-3 h-3" />}
-                              {inv.priority === 'Low' && <CheckCircle className="w-3 h-3" />}
-                              {inv.action}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-3xl border border-gray-200 p-8 text-center mb-6">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Eye className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-700">No Prediction Yet</h3>
-                <p className="text-gray-500 text-sm mt-1">
-                  Click the <strong>"Predict Risk"</strong> button above to get your first prediction.
-                </p>
-                <button
-                  onClick={runPrediction}
-                  disabled={predicting}
-                  className="mt-4 inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm disabled:opacity-50"
-                >
-                  {predicting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Predicting...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Predict My Risk
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
-                <p className="text-xs text-gray-400">Attendance</p>
-                <p className="text-lg font-bold text-gray-900">{student.attendance_rate}%</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
-                <p className="text-xs text-gray-400">Assignments</p>
-                <p className="text-lg font-bold text-gray-900">{student.assignments_completed}%</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
-                <p className="text-xs text-gray-400">Test Scores</p>
-                <p className="text-lg font-bold text-gray-900">{student.test_scores_avg}%</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
-                <p className="text-xs text-gray-400">Absences</p>
-                <p className="text-lg font-bold text-gray-900">{student.days_absent_last_term}</p>
-              </div>
-            </div>
-
-            {/* Prediction History */}
-            {predictions.length > 1 && (
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900">📊 Prediction History</h3>
-                  <span className="text-xs text-gray-400">{predictions.length} records</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50/50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {predictions.map((pred: any, index: number) => (
-                        <tr key={pred.id} className="hover:bg-gray-50/50 transition">
-                          <td className="px-6 py-3 text-sm text-gray-500">{formatDate(pred.created_at)}</td>
-                          <td className="px-6 py-3 font-medium text-gray-900">{Math.round(pred.risk_score)}%</td>
-                          <td className="px-6 py-3">
-                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${getRiskBg(pred.risk_category)}`}>
-                              {getRiskEmoji(pred.risk_category)} {pred.risk_category}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3">
-                            {index === 0 ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                                <CheckCircle className="w-3 h-3" />
-                                Latest
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">Previous</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
-
