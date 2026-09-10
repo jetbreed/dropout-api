@@ -1,8 +1,22 @@
+# Python
 venv/
 __pycache__/
 *.pyc
-.DS_Store
 .env
 *.pkl
 models/
+
+# Node
+node_modules/
+.next/
+dist/
+
+# Docker
+postgres_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
 *.log
