@@ -265,6 +265,11 @@ function LoginForm() {
               Default: admin / admin123
             </p>
           </div>
+          <div className="mt-6 pt-6 border-t border-gray-200/50">
+            <p className="text-xs text-gray-400 text-center">
+              Default: student1 / student123
+            </p>
+          </div>
         </div>
       </div>
     </div>
