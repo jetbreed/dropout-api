@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getToken, isAuthenticated, logout } from '@/lib/session';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -92,7 +93,13 @@ export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('access_token');
+    // const storedToken = localStorage.getItem('access_token');
+    const storedToken = getToken();
+    if (!storedToken || !isAuthenticated()) {
+      logout('/login?session_expired=true');
+      return;
+    }
+    
     const userStr = localStorage.getItem('user');
     
     if (!storedToken) {

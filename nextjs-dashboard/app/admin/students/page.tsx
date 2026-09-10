@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Plus, RefreshCw, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, RefreshCw, Users, ChevronLeft, ChevronRight, FileText, Sparkles, Eye, Activity } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:3001';
 
@@ -17,6 +17,9 @@ export default function AdminStudentsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalStudents, setTotalStudents] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [predictingId, setPredictingId] = useState<number | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -25,12 +28,12 @@ export default function AdminStudentsPage() {
       return;
     }
     fetchStudents(token);
-  }, [page, pageSize, search]);
+  }, [page, pageSize, search, sortBy, sortOrder]);
 
   const fetchStudents = async (token: string) => {
     setLoading(true);
     try {
-      const url = `${API_BASE_URL}/api/students/?page=${page}&page_size=${pageSize}${search ? `&search=${search}` : ''}`;
+      const url = `${API_BASE_URL}/api/students/?page=${page}&page_size=${pageSize}&sort_by=${sortBy}&sort_order=${sortOrder}${search ? `&search=${search}` : ''}`;
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -51,17 +54,19 @@ export default function AdminStudentsPage() {
   const predictStudent = async (studentId: number) => {
     const token = localStorage.getItem('access_token');
     if (!token) return;
+    setPredictingId(studentId);
     try {
       const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/predict`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
-        fetchStudents(token);
+        await fetchStudents(token);
       }
     } catch (err) {
       console.error('Prediction failed', err);
     }
+    setPredictingId(null);
   };
 
   const getRiskBadge = (category: string) => {
@@ -78,11 +83,11 @@ export default function AdminStudentsPage() {
     const maxVisible = 5;
     let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
     let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    
+
     if (endPage - startPage + 1 < maxVisible) {
       startPage = Math.max(1, endPage - maxVisible + 1);
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
@@ -92,6 +97,15 @@ export default function AdminStudentsPage() {
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setPageSize(Number(e.target.value));
     setPage(1);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
   };
 
   if (loading) {
@@ -106,6 +120,7 @@ export default function AdminStudentsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">👨‍🎓 Students</h1>
@@ -116,16 +131,20 @@ export default function AdminStudentsPage() {
             onClick={() => {
               const token = localStorage.getItem('access_token');
               if (token) {
-                fetch('/api/seed/students?count=10', {
+                fetch(`${API_BASE_URL}/api/seed/students`, {
                   method: 'POST',
-                  headers: { 'Authorization': `Bearer ${token}` }
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ count: 10 })
                 }).then(() => fetchStudents(token));
               }
             }}
             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition"
           >
             <RefreshCw className="w-4 h-4" />
-            Seed
+            Seed 10
           </button>
           <button
             onClick={() => router.push('/admin/students/add')}
@@ -166,6 +185,13 @@ export default function AdminStudentsPage() {
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -173,15 +199,33 @@ export default function AdminStudentsPage() {
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">#</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Attendance</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Assignments</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Test Scores</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden xl:table-cell">Absences</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell">Late Arrivals</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell">Disciplinary</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell">Parent Ed.</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('first_name')}>
+                  Student {sortBy === 'first_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell cursor-pointer hover:bg-gray-100" onClick={() => handleSort('attendance_rate')}>
+                  Attendance {sortBy === 'attendance_rate' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell cursor-pointer hover:bg-gray-100" onClick={() => handleSort('assignments_completed')}>
+                  Assignments {sortBy === 'assignments_completed' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell cursor-pointer hover:bg-gray-100" onClick={() => handleSort('test_scores_avg')}>
+                  Test Scores {sortBy === 'test_scores_avg' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden xl:table-cell cursor-pointer hover:bg-gray-100" onClick={() => handleSort('days_absent_last_term')}>
+                  Absences {sortBy === 'days_absent_last_term' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell cursor-pointer hover:bg-gray-100" onClick={() => handleSort('late_arrivals')}>
+                  Late {sortBy === 'late_arrivals' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell cursor-pointer hover:bg-gray-100" onClick={() => handleSort('disciplinary_incidents')}>
+                  Disciplinary {sortBy === 'disciplinary_incidents' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden 2xl:table-cell cursor-pointer hover:bg-gray-100" onClick={() => handleSort('parent_education_level')}>
+                  Parent Ed. {sortBy === 'parent_education_level' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('risk_score')}>
+                  Risk {sortBy === 'risk_score' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
                 <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -196,6 +240,7 @@ export default function AdminStudentsPage() {
               ) : (
                 students.map((student: any, index: number) => {
                   const serialNumber = (page - 1) * pageSize + index + 1;
+                  const isPredicting = predictingId === student.id;
                   return (
                     <tr key={student.id} className="hover:bg-gray-50/50 transition">
                       <td className="px-2 py-3 text-center text-gray-400 text-xs">{serialNumber}</td>
@@ -234,18 +279,34 @@ export default function AdminStudentsPage() {
                         )}
                       </td>
                       <td className="px-3 py-3 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => predictStudent(student.id)}
-                          className="text-primary-600 hover:text-primary-700 text-xs font-medium transition mr-2"
-                        >
-                          Predict
-                        </button>
-                        <button
-                          onClick={() => router.push(`/admin/students/${student.id}`)}
-                          className="text-gray-500 hover:text-gray-700 text-xs transition"
-                        >
-                          View
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => predictStudent(student.id)}
+                            disabled={isPredicting}
+                            className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition disabled:opacity-50"
+                            title="Predict Risk"
+                          >
+                            {isPredicting ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => router.push(`/admin/students/${student.id}`)}
+                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => router.push(`/admin/students/${student.id}/edit`)}
+                            className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition"
+                            title="Edit Student"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -270,7 +331,7 @@ export default function AdminStudentsPage() {
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            
+
             {getPageNumbers().map((pageNum) => (
               <button
                 key={pageNum}
@@ -284,7 +345,7 @@ export default function AdminStudentsPage() {
                 {pageNum}
               </button>
             ))}
-            
+
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}

@@ -1,8 +1,26 @@
 // nextjs-dashboard/app/admin/students/add/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { 
+  ArrowLeft,      // ✅ Make sure this is imported
+  Save, 
+  X, 
+  User, 
+  Mail, 
+  Calendar, 
+  Activity, 
+  TrendingUp, 
+  Clock, 
+  Shield, 
+  Home, 
+  AlertOctagon, 
+  BookOpen, 
+  Award, 
+  BarChart3, 
+  FileText 
+} from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:3001';
 
@@ -98,14 +116,19 @@ export default function AddStudentPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.push('/admin/students')}
-          className="text-gray-500 hover:text-gray-700 transition"
+          className="p-2 hover:bg-gray-100 rounded-xl transition"
+          title="Back to Students List"
         >
-          ← Back
+          <ArrowLeft className="w-5 h-5 text-gray-500" />
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">➕ Add Student</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Add Student</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Create a new student profile</p>
+        </div>
       </div>
 
       {error && (

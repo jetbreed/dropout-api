@@ -98,6 +98,9 @@ async def create_student(
 
 # fastapi-backend/app/routes/students.py - Fixed get_students
 
+# fastapi-backend/app/routes/students.py
+# Update the get_students function to allow students to see their own data
+
 @router.get("/", response_model=StudentListResponse)
 async def get_students(
     page: int = Query(1, ge=1, description="Page number"),
@@ -107,14 +110,21 @@ async def get_students(
     risk_category: Optional[str] = Query(None, description="Filter by risk category"),
     sort_by: Optional[str] = Query("created_at", description="Sort field"),
     sort_order: Optional[str] = Query("desc", description="Sort order (asc/desc)"),
-    current_user: User = Depends(require_role("admin")),
+    current_user: User = Depends(get_current_user),  # Changed from require_role("admin")
     db: Session = Depends(get_db)
 ):
     """
-    Get paginated list of students with risk scores (Admin only)
+    Get paginated list of students with risk scores.
+    Admin can see all students. Students can only see their own profile.
     """
     # Base query
     query = db.query(Student)
+    
+    # If user is not admin, filter to only their own student record
+    if current_user.role != "admin":
+        query = query.filter(Student.user_id == current_user.id)
+    
+    # Rest of the function remains the same...
     
     # Search filter
     if search:
@@ -190,6 +200,8 @@ async def get_students(
     end = start + page_size
     paginated = student_responses[start:end]
     
+    # In the get_students function, update the response construction:
+
     return StudentListResponse(
         total=total,
         page=page,
@@ -205,10 +217,16 @@ async def get_students(
                 grade_level=s["student"].grade_level,
                 age=s["student"].age,
                 gender=s["student"].gender,
+                previous_grade=s["student"].previous_grade,
                 attendance_rate=s["student"].attendance_rate,
                 assignments_completed=s["student"].assignments_completed,
                 test_scores_avg=s["student"].test_scores_avg,
                 days_absent_last_term=s["student"].days_absent_last_term,
+                late_arrivals=s["student"].late_arrivals,              # ✅ Add
+                disciplinary_incidents=s["student"].disciplinary_incidents,  # ✅ Add
+                parent_education_level=s["student"].parent_education_level,  # ✅ Add
+                family_income_level=s["student"].family_income_level,  # ✅ Add
+                has_internet_access=s["student"].has_internet_access,  # ✅ Add
                 risk_score=s["risk_score"],
                 risk_category=s["risk_category"],
                 created_at=s["created_at"],
@@ -252,6 +270,7 @@ async def get_student(
         Prediction.student_id == student.id
     ).order_by(desc(Prediction.created_at)).first()
     
+    # In the get_student function:
     return StudentResponse(
         id=student.id,
         user_id=student.user_id,
@@ -261,10 +280,16 @@ async def get_student(
         grade_level=student.grade_level,
         age=student.age,
         gender=student.gender,
+        previous_grade=student.previous_grade,
         attendance_rate=student.attendance_rate,
         assignments_completed=student.assignments_completed,
         test_scores_avg=student.test_scores_avg,
         days_absent_last_term=student.days_absent_last_term,
+        late_arrivals=student.late_arrivals,              # ✅ Add
+        disciplinary_incidents=student.disciplinary_incidents,  # ✅ Add
+        parent_education_level=student.parent_education_level,  # ✅ Add
+        family_income_level=student.family_income_level,  # ✅ Add
+        has_internet_access=student.has_internet_access,  # ✅ Add
         risk_score=latest_pred.risk_score if latest_pred else None,
         risk_category=latest_pred.risk_category if latest_pred else None,
         created_at=student.created_at,
@@ -326,6 +351,31 @@ async def update_student(
         updated_at=student.updated_at
     )
 
+
+# fastapi-backend/app/routes/students.py
+# Add this endpoint
+
+@router.put("/{student_id}/link-user")
+async def link_student_to_user(
+    student_id: int,
+    user_id: int,
+    current_user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db)
+):
+    """Link a student profile to a user account (Admin only)"""
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    student.user_id = user_id
+    db.commit()
+    db.refresh(student)
+    
+    return {"message": f"Student {student_id} linked to user {user_id}"}
 # ============================================
 # DELETE STUDENT
 # ============================================

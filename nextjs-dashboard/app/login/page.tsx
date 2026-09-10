@@ -1,15 +1,18 @@
 // nextjs-dashboard/app/login/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, GraduationCap } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Mail, Lock, ArrowRight, GraduationCap, AlertTriangle } from 'lucide-react';
 import PasswordInput from '@/components/PasswordInput';
+import { updateLastActivity } from '@/lib/session';
 
-
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionExpired = searchParams.get('session_expired') === 'true';
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,23 +20,6 @@ export default function LoginPage() {
   const [show2FA, setShow2FA] = useState(false);
   const [twoFAToken, setTwoFAToken] = useState('');
   const [tempUsername, setTempUsername] = useState('');
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user.role === 'admin') {
-            router.push('/admin/dashboard');
-          } else {
-            router.push('/dashboard');
-          }
-        } catch (e) {}
-      }
-    }
-  }, []);
 
   const getErrorMessage = (data: any): string => {
     if (!data) return 'An unknown error occurred';
@@ -90,11 +76,12 @@ export default function LoginPage() {
         localStorage.setItem('refresh_token', data.refresh_token);
         if (data.user) {
           localStorage.setItem('user', JSON.stringify(data.user));
-          if (data.user.role === 'admin') {
-            router.push('/admin/dashboard');
-          } else {
-            router.push('/dashboard');
-          }
+        }
+        // ✅ Set activity timestamp immediately after login
+        updateLastActivity();
+
+        if (data.user?.role === 'admin') {
+          router.push('/admin/dashboard');
         } else {
           router.push('/dashboard');
         }
@@ -107,6 +94,40 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError('Login failed: ' + (err as Error).message);
+    }
+    setLoading(false);
+  };
+
+  const handle2FAVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: tempUsername,
+          token: twoFAToken,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+        updateLastActivity();
+        router.push('/dashboard');
+      } else {
+        setError(getErrorMessage(data));
+      }
+    } catch (err) {
+      setError('2FA verification failed: ' + (err as Error).message);
     }
     setLoading(false);
   };
@@ -171,6 +192,15 @@ export default function LoginPage() {
         {/* Login Card */}
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/30">
           <form onSubmit={handleLogin} className="space-y-5">
+            {/* Session Expired Message */}
+            {sessionExpired && (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                Your session has expired. Please log in again.
+              </div>
+            )}
+
+            {/* Username Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
               <div className="relative">
@@ -185,35 +215,23 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-sm font-medium text-gray-700">Password</label>
-                <Link href="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 transition">
-                  Forgot?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition outline-none bg-white/50"
-                />
+            {/* Password Field */}
+            <PasswordInput
+              id="password"
+              name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              label="Password"
+              required
+              autoComplete="current-password"
+            />
 
-                <PasswordInput
-                  id="password"
-                  name="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  label="Password"
-                  required
-                  autoComplete="current-password"
-                />
-                
-              </div>
+            {/* Forgot Password Link */}
+            <div className="text-right -mt-2">
+              <Link href="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 transition">
+                Forgot password?
+              </Link>
             </div>
 
             {error && (
@@ -249,5 +267,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

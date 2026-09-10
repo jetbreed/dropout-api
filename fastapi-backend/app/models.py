@@ -74,6 +74,7 @@ class StudentUpdate(BaseModel):
     test_scores_avg: Optional[float] = Field(None, ge=0, le=100)
 
 # StudentResponse - remove student_id
+# fastapi-backend/app/models.py
 class StudentResponse(BaseModel):
     id: int
     user_id: int
@@ -83,10 +84,16 @@ class StudentResponse(BaseModel):
     grade_level: Optional[int] = None
     age: int
     gender: int
+    previous_grade: float
     attendance_rate: float
     assignments_completed: float
     test_scores_avg: float
     days_absent_last_term: int
+    late_arrivals: int
+    disciplinary_incidents: int
+    parent_education_level: int
+    family_income_level: int
+    has_internet_access: int
     risk_score: Optional[float] = None
     risk_category: Optional[str] = None
     created_at: datetime

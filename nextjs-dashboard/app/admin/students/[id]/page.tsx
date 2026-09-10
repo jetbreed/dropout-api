@@ -3,24 +3,28 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  User, 
-  Mail, 
-  Calendar, 
-  Activity, 
-  TrendingUp, 
-  Clock, 
-  BarChart3,
-  BookOpen,
-  Award,
-  Target,
+import {
+  ArrowLeft,
+  Mail,
   Sparkles,
   RefreshCw,
   AlertTriangle,
   CheckCircle,
   Info,
-  XCircle
+  XCircle,
+  FileText,
+  TrendingUp,
+  BarChart3,
+  Award,
+  Calendar,
+  Clock,
+  AlertOctagon,
+  Shield,
+  Home,
+  Activity,
+  Users,
+  GraduationCap,
+  User,              // ✅ ADD THIS
 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:3001';
@@ -161,14 +165,38 @@ export default function StudentDetailPage() {
     );
   }
 
+  // Feature sections with all fields
+  const academicFeatures = [
+    { label: 'Attendance Rate', value: `${student.attendance_rate}%`, icon: TrendingUp },
+    { label: 'Assignments Completed', value: `${student.assignments_completed}%`, icon: FileText },
+    { label: 'Test Scores', value: `${student.test_scores_avg}%`, icon: BarChart3 },
+    { label: 'Previous Grade', value: `${student.previous_grade}%`, icon: Award },
+  ];
+
+  const behavioralFeatures = [
+    { label: 'Days Absent', value: student.days_absent_last_term, icon: Calendar },
+    { label: 'Late Arrivals', value: student.late_arrivals, icon: Clock },
+    { label: 'Disciplinary Incidents', value: student.disciplinary_incidents, icon: AlertOctagon },
+  ];
+
+  const demographicFeatures = [
+    { label: 'Age', value: student.age, icon: Users },
+    { label: 'Gender', value: student.gender === 0 ? 'Female' : 'Male', icon: User },
+    { label: 'Grade Level', value: student.grade_level || 'N/A', icon: GraduationCap },
+    { label: 'Parent Education', value: `${student.parent_education_level}/5`, icon: Shield },
+    { label: 'Family Income', value: `${student.family_income_level}/5`, icon: Home },
+    { label: 'Internet Access', value: student.has_internet_access === 1 ? '✅ Yes' : '❌ No', icon: Activity },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Back, Title, Edit, and Predict buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/admin/students')}
             className="p-2 hover:bg-gray-100 rounded-xl transition"
+            title="Back to Students List"
           >
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </button>
@@ -187,43 +215,62 @@ export default function StudentDetailPage() {
             </div>
           </div>
         </div>
-        <button
-          onClick={runPrediction}
-          disabled={predicting}
-          className="px-5 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-2 disabled:opacity-50"
-        >
-          {predicting ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Predicting...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              Predict Risk
-            </>
-          )}
-        </button>
+
+        {/* Edit and Predict buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => router.push(`/admin/students/${studentId}/edit`)}
+            className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition shadow-sm flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Edit
+          </button>
+          <button
+            onClick={runPrediction}
+            disabled={predicting}
+            className="px-5 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-2 disabled:opacity-50"
+          >
+            {predicting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Predicting...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Predict Risk
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-center">
           <p className="text-xs text-gray-400">Age</p>
-          <p className="text-xl font-bold text-gray-900">{student.age}</p>
+          <p className="text-lg font-bold text-gray-900">{student.age}</p>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-center">
           <p className="text-xs text-gray-400">Gender</p>
-          <p className="text-xl font-bold text-gray-900">{student.gender === 0 ? 'Female' : 'Male'}</p>
+          <p className="text-lg font-bold text-gray-900">{student.gender === 0 ? 'Female' : 'Male'}</p>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-center">
           <p className="text-xs text-gray-400">Grade</p>
-          <p className="text-xl font-bold text-gray-900">{student.grade_level || 'N/A'}</p>
+          <p className="text-lg font-bold text-gray-900">{student.grade_level || 'N/A'}</p>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
-          <p className="text-xs text-gray-400">Risk Score</p>
-          <p className={`text-xl font-bold ${student.risk_score ? getRiskColor(student.risk_category) : 'text-gray-400'}`}>
-            {student.risk_score ? `${Math.round(student.risk_score)}%` : '—'}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-center">
+          <p className="text-xs text-gray-400">Parent Ed.</p>
+          <p className="text-lg font-bold text-gray-900">{student.parent_education_level}/5</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-center">
+          <p className="text-xs text-gray-400">Late Arrivals</p>
+          <p className="text-lg font-bold text-gray-900">{student.late_arrivals}</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-center">
+          <p className="text-xs text-gray-400">Disciplinary</p>
+          <p className={`text-lg font-bold ${student.disciplinary_incidents > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+            {student.disciplinary_incidents}
           </p>
         </div>
       </div>
@@ -257,54 +304,53 @@ export default function StudentDetailPage() {
         </div>
       )}
 
-      {/* Feature Grid */}
+      {/* Academic Features */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">📚 Academic Features</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Attendance Rate</p>
-            <p className="text-lg font-bold text-gray-900">{student.attendance_rate}%</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Assignments</p>
-            <p className="text-lg font-bold text-gray-900">{student.assignments_completed}%</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Test Scores</p>
-            <p className="text-lg font-bold text-gray-900">{student.test_scores_avg}%</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Previous Grade</p>
-            <p className="text-lg font-bold text-gray-900">{student.previous_grade}%</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Days Absent</p>
-            <p className="text-lg font-bold text-gray-900">{student.days_absent_last_term}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Late Arrivals</p>
-            <p className="text-lg font-bold text-gray-900">{student.late_arrivals}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Disciplinary Incidents</p>
-            <p className="text-lg font-bold text-gray-900">{student.disciplinary_incidents}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Parent Education</p>
-            <p className="text-lg font-bold text-gray-900">{student.parent_education_level}/5</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Late Arrivals</p>
-            <p className="text-lg font-bold text-gray-900">{student.late_arrivals}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Disciplinary Incidents</p>
-            <p className="text-lg font-bold text-gray-900">{student.disciplinary_incidents}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Parent Education</p>
-            <p className="text-lg font-bold text-gray-900">{student.parent_education_level}/5</p>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {academicFeatures.map((feature, idx) => (
+            <div key={idx} className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400">{feature.label}</p>
+              <div className="flex items-center gap-2">
+                <feature.icon className="w-3.5 h-3.5 text-gray-400" />
+                <p className="text-lg font-bold text-gray-900">{feature.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Behavioral Features */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">⚠️ Behavioral Features</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {behavioralFeatures.map((feature, idx) => (
+            <div key={idx} className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400">{feature.label}</p>
+              <div className="flex items-center gap-2">
+                <feature.icon className="w-3.5 h-3.5 text-gray-400" />
+                <p className={`text-lg font-bold ${(feature.label === 'Disciplinary Incidents' && feature.value > 0) || (feature.label === 'Days Absent' && feature.value > 10) ? 'text-red-600' : 'text-gray-900'}`}>
+                  {feature.value}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Demographic Features */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">👤 Demographic Features</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {demographicFeatures.map((feature, idx) => (
+            <div key={idx} className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400">{feature.label}</p>
+              <div className="flex items-center gap-2">
+                <feature.icon className="w-3.5 h-3.5 text-gray-400" />
+                <p className="text-lg font-bold text-gray-900">{feature.value}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -323,6 +369,7 @@ export default function StudentDetailPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk Score</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Top Factors</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -335,6 +382,19 @@ export default function StudentDetailPage() {
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${getRiskBadge(pred.risk_category)}`}>
                         {getRiskEmoji(pred.risk_category)} {pred.risk_category}
                       </span>
+                    </td>
+                    <td className="px-6 py-3">
+                      {pred.top_factors && pred.top_factors.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {pred.top_factors.map((factor: any, fi: number) => (
+                            <span key={fi} className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">
+                              {factor.feature.replace(/_/g, ' ')}: {factor.value}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
