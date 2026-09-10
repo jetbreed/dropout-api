@@ -3,8 +3,6 @@ venv/
 __pycache__/
 *.pyc
 .env
-*.pkl
-models/
 
 # Node
 node_modules/
@@ -18,5 +16,10 @@ postgres_data/
 .DS_Store
 Thumbs.db
 
+# Ignore root models but keep fastapi-backend models
+/models/*.pkl
+!/fastapi-backend/models/*.pkl
 
-*.log
+# Local env files
+.env.local
+.env*.local

@@ -47,7 +47,7 @@ ChartJS.register(
   Filler
 );
 
-const API_BASE_URL = 'http://localhost:3001';
+import { API_BASE_URL } from '@/lib/api';
 
 const COLORS = {
   primary: '#4F46E5',
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
       logout('/login?session_expired=true');
       return;
     }
-    
+
     const userStr = localStorage.getItem('user');
     
     if (!storedToken) {

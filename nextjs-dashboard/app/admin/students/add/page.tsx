@@ -22,7 +22,7 @@ import {
   FileText 
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:3001';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function AddStudentPage() {
   const router = useRouter();

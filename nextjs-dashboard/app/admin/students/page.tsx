@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, RefreshCw, Users, ChevronLeft, ChevronRight, FileText, Sparkles, Eye, Activity } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:3001';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function AdminStudentsPage() {
   const router = useRouter();

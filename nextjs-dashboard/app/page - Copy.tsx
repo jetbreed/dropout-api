@@ -29,7 +29,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'admin', password: 'admin123' }),
@@ -55,7 +55,7 @@ export default function Home() {
     setResult(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/predict', {
+      const response = await fetch(`${API_BASE_URL}/api/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

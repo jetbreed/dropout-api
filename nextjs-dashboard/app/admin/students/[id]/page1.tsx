@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, X, User, Mail, Calendar, Activity, TrendingUp, Clock, Shield, Home, AlertOctagon, BookOpen, Award, BarChart3, FileText } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:3001';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function EditStudentPage() {
   const router = useRouter();
