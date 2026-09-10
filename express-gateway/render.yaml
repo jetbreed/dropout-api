@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: dropout-gateway
+    runtime: node
+    plan: free
+    rootDir: express-gateway
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: FASTAPI_URL
+        value: https://dropout-fastapi.onrender.com
+      - key: JWT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
