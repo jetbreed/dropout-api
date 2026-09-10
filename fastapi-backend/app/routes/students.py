@@ -351,7 +351,33 @@ async def update_student(
         updated_at=student.updated_at
     )
 
-
+@router.put("/{student_id}/link-user/{user_id}")
+async def link_student_to_user(
+    student_id: int,
+    user_id: int,
+    current_user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db)
+):
+    """Link a student profile to a user account (Admin only)"""
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    student.user_id = user_id
+    db.commit()
+    db.refresh(student)
+    
+    return {
+        "message": f"Student {student_id} linked to user {user_id}",
+        "student_name": f"{student.first_name} {student.last_name}",
+        "user_name": user.username
+    }
+    
+    
 # fastapi-backend/app/routes/students.py
 # Add this endpoint
 
