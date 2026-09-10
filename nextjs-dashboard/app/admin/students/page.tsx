@@ -33,7 +33,7 @@ export default function AdminStudentsPage() {
   const fetchStudents = async (token: string) => {
     setLoading(true);
     try {
-      const url = `${API_BASE_URL}/api/students/?page=${page}&page_size=${pageSize}&sort_by=${sortBy}&sort_order=${sortOrder}${search ? `&search=${search}` : ''}`;
+      const url = `${API_BASE_URL}/students/?page=${page}&page_size=${pageSize}&sort_by=${sortBy}&sort_order=${sortOrder}${search ? `&search=${search}` : ''}`;
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -56,7 +56,7 @@ export default function AdminStudentsPage() {
     if (!token) return;
     setPredictingId(studentId);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/predict`, {
+      const response = await fetch(`${API_BASE_URL}/students/${studentId}/predict`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -131,7 +131,7 @@ export default function AdminStudentsPage() {
             onClick={() => {
               const token = localStorage.getItem('access_token');
               if (token) {
-                fetch(`${API_BASE_URL}/api/seed/students`, {
+                fetch(`${API_BASE_URL}/seed/students`, {
                   method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${token}`,

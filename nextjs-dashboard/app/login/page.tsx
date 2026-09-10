@@ -64,7 +64,7 @@ function LoginForm() {
       formData.append('username', loginUsername);
       formData.append('password', loginPassword);
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData.toString(),
@@ -105,7 +105,7 @@ function LoginForm() {
     setError(null);
 
     try {
-      const response = await fetch(API_BASE_URL + '/api/auth/verify-2fa', {
+      const response = await fetch(API_BASE_URL + '/auth/verify-2fa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -63,7 +63,7 @@ export default function AddStudentPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/`, {
+      const response = await fetch(`${API_BASE_URL}/students/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

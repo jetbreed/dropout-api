@@ -1,8 +1,9 @@
 // nextjs-dashboard/lib/api.ts
 import { getToken, logout, updateLastActivity } from './session';
 
+// Get API URL from environment variable with fallback
 export const API_BASE_URL = 
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 export async function apiCall(
   endpoint: string,
