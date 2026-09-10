@@ -25,7 +25,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://your-app.vercel.app",
+        "https://dropout-p9ifrps11-jetbreeds-projects.vercel.app",
+        "https://dropout-api.vercel.app",  # If you have a custom domain
     ],
     allow_credentials=True,
     allow_methods=["*"],
