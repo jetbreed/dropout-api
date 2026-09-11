@@ -64,7 +64,7 @@ function LoginForm() {
       formData.append('username', loginUsername);
       formData.append('password', loginPassword);
 
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData.toString(),
