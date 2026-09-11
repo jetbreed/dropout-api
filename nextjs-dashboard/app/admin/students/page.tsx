@@ -35,7 +35,7 @@ export default function AdminStudentsPage() {
   const fetchStudents = async (token: string) => {
     setLoading(true);
     try {
-      const url = `${API_BASE_URL}/students/?page=${page}&page_size=${pageSize}&sort_by=${sortBy}&sort_order=${sortOrder}${search ? `&search=${search}` : ''}`;
+      const url = `${API_BASE_URL}/api/students/?page=${page}&page_size=${pageSize}&sort_by=${sortBy}&sort_order=${sortOrder}${search ? `&search=${search}` : ''}`;
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
