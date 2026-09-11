@@ -5,7 +5,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, RefreshCw, Users, ChevronLeft, ChevronRight, FileText, Sparkles, Eye, Activity } from 'lucide-react';
 
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 export default function AdminStudentsPage() {
   const router = useRouter();
@@ -56,7 +58,7 @@ export default function AdminStudentsPage() {
     if (!token) return;
     setPredictingId(studentId);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/predict`, {
+      const response = await apiCall(`/students/${studentId}/predict`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -131,7 +133,7 @@ export default function AdminStudentsPage() {
             onClick={() => {
               const token = localStorage.getItem('access_token');
               if (token) {
-                fetch(`${API_BASE_URL}/api/seed/students`, {
+                apiCall(`/seed/students`, {
                   method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${token}`,

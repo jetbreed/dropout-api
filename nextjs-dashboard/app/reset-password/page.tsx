@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PasswordInput from '@/components/PasswordInput';
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -67,7 +67,7 @@ function ResetPasswordForm() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      const response = await apiCall(`/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

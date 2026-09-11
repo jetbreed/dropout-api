@@ -47,7 +47,7 @@ ChartJS.register(
   Filler
 );
 
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 const COLORS = {
   primary: '#4F46E5',
@@ -126,13 +126,13 @@ export default function AdminDashboard() {
     setError(null);
     try {
       const [statsRes, trendRes, factorsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/analytics/dashboard-stats`, {
+        apiCall(`/analytics/dashboard-stats`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/api/analytics/risk-trend?days=30`, {
+        apiCall(`/analytics/risk-trend?days=30`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/api/analytics/top-risk-factors`, {
+        apiCall(`/analytics/top-risk-factors`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         })
       ]);

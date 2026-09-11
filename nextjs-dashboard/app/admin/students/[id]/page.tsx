@@ -27,7 +27,7 @@ import {
   User,              // ✅ ADD THIS
 } from 'lucide-react';
 
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 export default function StudentDetailPage() {
   const router = useRouter();
@@ -54,7 +54,7 @@ export default function StudentDetailPage() {
 
   const fetchStudentData = async (token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
+      const response = await apiCall(`/students/${studentId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -70,7 +70,7 @@ export default function StudentDetailPage() {
 
   const fetchPredictionHistory = async (token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/predictions`, {
+      const response = await apiCall(`/students/${studentId}/predictions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -89,7 +89,7 @@ export default function StudentDetailPage() {
 
     setPredicting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/predict`, {
+      const response = await apiCall(`/students/${studentId}/predict`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

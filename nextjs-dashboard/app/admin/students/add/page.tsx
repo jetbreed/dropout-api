@@ -22,7 +22,7 @@ import {
   FileText 
 } from 'lucide-react';
 
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 export default function AddStudentPage() {
   const router = useRouter();
@@ -63,7 +63,7 @@ export default function AddStudentPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/`, {
+      const response = await apiCall(`/students/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

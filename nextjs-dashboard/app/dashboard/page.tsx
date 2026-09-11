@@ -18,7 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -57,7 +57,7 @@ export default function StudentDashboard() {
     setLoading(true);
     try {
       // Get user info first
-      const userResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      const userResponse = await apiCall(`/auth/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const userData = await userResponse.json();
@@ -71,7 +71,7 @@ export default function StudentDashboard() {
       console.log('User data:', userData);
 
       // Try to fetch student by user_id
-      const response = await fetch(`${API_BASE_URL}/api/students/?page=1&page_size=1`, {
+      const response = await apiCall(`/students/?page=1&page_size=1`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -83,7 +83,7 @@ export default function StudentDashboard() {
         setStudent(studentData);
         
         // Fetch predictions
-        const predResponse = await fetch(`${API_BASE_URL}/api/students/${studentData.id}/predictions`, {
+        const predResponse = await apiCall(`/students/${studentData.id}/predictions`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const predData = await predResponse.json();
@@ -109,7 +109,7 @@ export default function StudentDashboard() {
 
     setPredicting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${student.id}/predict`, {
+      const response = await apiCall(`/students/${student.id}/predict`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

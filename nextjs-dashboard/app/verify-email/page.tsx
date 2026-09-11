@@ -4,7 +4,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 function VerifyEmailForm() {
   const searchParams = useSearchParams();
@@ -53,7 +53,7 @@ function VerifyEmailForm() {
 
     const verifyEmail = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
+        const response = await apiCall(`/auth/verify-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token }),

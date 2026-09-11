@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, User, Lock, Shield, ArrowRight, GraduationCap, CheckCircle } from 'lucide-react';
 import PasswordInput from '@/components/PasswordInput';
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await apiCall(`/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

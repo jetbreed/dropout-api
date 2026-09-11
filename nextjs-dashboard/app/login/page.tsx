@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, ArrowRight, GraduationCap, AlertTriangle } from 'lucide-react';
 import PasswordInput from '@/components/PasswordInput';
 import { updateLastActivity } from '@/lib/session';
-import { API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 
 function LoginForm() {
   const router = useRouter();
@@ -64,7 +64,7 @@ function LoginForm() {
       formData.append('username', loginUsername);
       formData.append('password', loginPassword);
 
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      const response = await apiCall(`/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData.toString(),
@@ -105,7 +105,7 @@ function LoginForm() {
     setError(null);
 
     try {
-      const response = await fetch(API_BASE_URL + '/auth/verify-2fa', {
+      const response = await apiCall(`/auth/verify-2fa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
