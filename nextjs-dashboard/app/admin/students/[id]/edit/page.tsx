@@ -57,7 +57,7 @@ export default function EditStudentPage() {
 
   const fetchStudentData = async (token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/students/${studentId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -107,7 +107,7 @@ export default function EditStudentPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/students/${studentId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

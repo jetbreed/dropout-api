@@ -126,13 +126,13 @@ export default function AdminDashboard() {
     setError(null);
     try {
       const [statsRes, trendRes, factorsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/analytics/dashboard-stats`, {
+        fetch(`${API_BASE_URL}/api/analytics/dashboard-stats`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/analytics/risk-trend?days=30`, {
+        fetch(`${API_BASE_URL}/api/analytics/risk-trend?days=30`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         }),
-        fetch(`${API_BASE_URL}/analytics/top-risk-factors`, {
+        fetch(`${API_BASE_URL}/api/analytics/top-risk-factors`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         })
       ]);

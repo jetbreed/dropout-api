@@ -3,7 +3,10 @@ import { getToken, logout, updateLastActivity } from './session';
 
 // Get API URL from environment variable with fallback
 export const API_BASE_URL = 
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  // Helper to make API calls with automatic /api prefix
+export const API_URL = `${API_BASE_URL}/api`;
 
 export async function apiCall(
   endpoint: string,
